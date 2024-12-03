@@ -31,7 +31,7 @@ def login():
         db_name = request.form['database_name']
         db_server_name = request.form['database_server_name']
 
-        # Validate against the Azure database
+        # Validate against the Azure database here
         conn = get_db_connection()
         if conn:
             cursor = conn.cursor()
