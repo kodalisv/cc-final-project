@@ -4,7 +4,7 @@ import pyodbc
 app = Flask(__name__)
 app.secret_key = "secret_key"
 
-# Database Configuration
+# Database Configuration code
 server = 'ccfinalprojectserver.database.windows.net'
 database = 'ccfinalprojectdatabase'
 username = 'finalprojectlogin'
