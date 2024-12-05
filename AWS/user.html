@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html>
+<title>User info</title>
+<body>
+<h1>User info</h1>
+<div class="info">
+    <strong>Username:</strong> {{ user[1] }}<br>
+    <strong>First Name:</strong> {{ user[3] }}<br>
+    <strong>Last Name:</strong> {{ user[4] }}<br>
+    <strong>Email:</strong> {{ user[5] }}<br><br>
+</div>
+    <form method="POST" action="/upload/{{ user[0] }}" enctype="multipart/form-data">
+        <strong>Upload File:</strong> <br>
+        <input type="file" name="file"> <br>
+        <input type="submit" value="Upload"> <br><br>
+    </form>
+    <form method="POST" action="/download/{{ user[0] }}:{{ file[0] }}">
+        <strong>Download File:</strong> {{ file[0] }} <br>
+        <strong>File Word Count:</strong> {{ file[1] }} <br>
+        <input type="submit" value="Download">
+    </form>
+</body>
