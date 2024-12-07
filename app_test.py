@@ -3,6 +3,7 @@ import pymssql as sql
 import os
 import pandas as pd
 from sklearn import model_selection, ensemble
+import datetime
 
 #app = Flask(__name__)
 
@@ -82,13 +83,14 @@ def index():
 def register():
     username = request.form.get("uname")
     password = request.form.get("pword")
+    email = request.form.get("email")
     maxtemp = int(request.form.get("maxt"))
     mintemp = int(request.form.get("mint"))
-    print(username, password, maxtemp, mintemp)
+    print(username, password, email, maxtemp, mintemp)
 
     userid = getuid(username, password)
     if userid == -1:
-        insert_query("INSERT INTO dbo.users (uname, pword, maxt, mint) VALUES (%s, %s, %s, %s)", (username, password, maxtemp, mintemp))
+        insert_query("INSERT INTO dbo.users (uname, pword, email, maxt, mint) VALUES (%s, %s, %s, %s, %s)", (username, password, email, maxtemp, mintemp))
         userid = getuid(username, password)
     else:
         insert_query("UPDATE dbo.users SET maxt = %s, mint = %s WHERE id = %s",
@@ -102,16 +104,22 @@ def main(uid):
     else:
         return render_template('user.html')
 
-@app.route("/predict/<uid>/<year>/<month>/<day>")
-def predict(uid, year, month, day):
+@app.route("/predict/<uid>")
+def predict(uid):
+    currentDate = datetime.datetime.now()
+    year = currentDate.year
+    month = currentDate.month
+    day = currentDate.day
     # Execute a query
-    results = execute_query("SELECT * FROM dbo.HS_WEATHER;")
+    weatherResults = execute_query("SELECT * FROM dbo.HS_WEATHER;")
+    coldLimit = execute_query("SELECT mint FROM dbo.users WHERE id=?;", uid)
+    hotLimit = execute_query("SELECT maxt FROM dbo.users WHERE id=?;", uid)
 
     # Get column names
-    columnNames = [column[0] for column in results]
+    columnNames = [column[0] for column in weatherResults]
 
     # Import data
-    data = pd.DataFrame.from_records(results, columns=columnNames)
+    data = pd.DataFrame.from_records(weatherResults, columns=columnNames)
 
     # Modify data
     # Separate dates first
@@ -156,8 +164,6 @@ def predict(uid, year, month, day):
     rainForest.fit(X_train_rain, y_train_rain)
 
     # Predict temperature
-    coldLimit = 40
-    hotLimit = 80
     # Filter historic data to only matching date
     prevData = data.loc[data["DAY"] == day]
     prevData = prevData.loc[prevData['MONTH'] == month]

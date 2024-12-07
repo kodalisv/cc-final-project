@@ -2,6 +2,7 @@ from flask import Flask, render_template, request
 import pymssql
 import pandas as pd
 from sklearn import model_selection, ensemble
+import datetime
 
 app = Flask(__name__)
 
@@ -55,8 +56,12 @@ def configure(user):
     
     return render_template('configure.html')
 
-@app.route("/predict/<user>/<year>/<month>/<day>")
-def predict(user, year, month, day):
+@app.route("/predict/<user>")
+def predict(user):
+    currentDate = datetime.datetime.now()
+    year = currentDate.year
+    month = currentDate.month
+    day = currentDate.day
     # Connect to the database
     connection = pymssql.connect(
         server=DB_SERVER,
@@ -73,6 +78,9 @@ def predict(user, year, month, day):
 
     # Get column names
     columnNames = [column[0] for column in cursor.description]
+
+    # Execute a second query for user temperature limits
+    cursor.execute("SELECT maxt, mint FROM dbo.users WHERE uname=?;", user)
 
     # Fetch the data
     queryData = cursor.fetchall()
