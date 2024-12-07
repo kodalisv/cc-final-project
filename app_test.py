@@ -157,7 +157,7 @@ def get_data(query=None, args=()):
         q1 : ("SELECT YEAR(DATE) AS YEAR, MAX(TEMP) AS MAX_TEMP, MIN(TEMP) AS MIN_TEMP FROM " +\
         "(SELECT TEMP, DATE FROM dbo.HS_WEATHER WHERE MONTH(DATE) = MONTH(GETDATE())) LM " +\
         "GROUP BY YEAR(DATE);", ("YEAR", "MAX_TEMP", "MIN_TEMP"), "bar", "", "Temperature (F)", 
-        "Previous Years Temperature chart")
+        "Previous Years Temperature chart of current month")
     }
 
     
@@ -165,36 +165,37 @@ def get_data(query=None, args=()):
     
     try:
         quest = responses[query]
-        results = execute_query(quest[0], args)
+        data = execute_query(quest[0], args)
         cols = quest[1]
         ctype = quest[2]
         x_title = quest[3]
         y_title = quest[4]
         c_title = quest[5]
     except KeyError as e:
-        results = []
+        data = []
         cols = set()
         ctype = ""
         x_title = ""
         y_title = ""
         c_title = ""
     
-    return results, cols, ctype, x_title, y_title, c_title
+    return data, cols, ctype, x_title, y_title, c_title
 
-def get_chart(data, cols, ctype = "bar", x_title="", y_title="", c_title=""):
+def get_chart(data, cols, ctype = "bar", x_title="", y_title="", c_title="Data Chart"):
     """Generate a chart using Matplotlib."""
     df = pd.DataFrame.from_records(data, columns=cols)
     emp = lambda x, y: x if x != "" else y
+    print(df)
     
     match ctype:
         case "bar":
             df.plot(x=cols[0], 
                     kind=ctype, 
-                    stacked=False, 
-                    title=emp(c_title,'Data Chart'),
-                    x_title=emp(x_title, cols[1]),
-                    y_title=emp(y_title, cols[2]))
+                    stacked=False)
             plt.xticks(rotation=0, ha='right')
+            plt.xlabel(emp(x_title, cols[0]))
+            plt.ylabel(y_title)
+            plt.title(c_title)
 
     img = io.BytesIO()
     plt.savefig(img, format='png')
@@ -209,8 +210,8 @@ def query():
     user_query = request.json.get('query').lower()
     print("query: {}".format(user_query))
     try:
-        data, cols = get_data(user_query)
-        chart = get_chart(data, cols,'bar', y_title='temp')
+        data, cols, ctype, x_title, y_title, c_title = get_data(user_query)
+        chart = get_chart(data, cols, ctype, x_title, y_title, c_title)
         return send_file(chart, mimetype='image/png')
     except Exception as e:
         response = {"error": str(e)}
