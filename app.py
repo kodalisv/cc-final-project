@@ -34,6 +34,27 @@ def login():
         weather_data=weather_data
     )
 
+# Let a user configure their account data, including cold/hot limits
+# TODO: This is both incomplete and untested, which should be fixed!
+@app.route("/configure/<user>", methods=["GET", "POST"])
+def configure(user):
+    if request.method == "POST":
+        newHotLimit = request.form.get("hotlimit")
+        newColdLimit = request.form.get("coldlimit")
+
+        # Example database query
+        try:
+            conn = pymssql.connect(DB_SERVER, DB_USER, DB_PASSWORD, DB_NAME)
+            cursor = conn.cursor(as_dict=True)
+            cursor.execute("UPDATE dbo.users SET maxt=?, mint=? WHERE uname=?", newHotLimit, newColdLimit, user)
+            cursor.commit()
+            cursor.close()
+            conn.close()
+        except Exception as e:
+            weather_data = f"Error connecting to database: {e}"
+    
+    return render_template('configure.html')
+
 @app.route("/predict/<user>/<year>/<month>/<day>")
 def predict(user, year, month, day):
     # Connect to the database
