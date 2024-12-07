@@ -115,6 +115,12 @@ def main(uid):
                 weatherResults = execute_query("SELECT * FROM dbo.HS_WEATHER;")
                 columnNames = [column[0] for column in cursor.description]
                 data = pd.DataFrame.from_records(weatherResults, columns=columnNames)
+
+                sort_column = request.form.get('sort_column')
+                sort_order = request.form.get('sort_order', 'asc')
+
+                if sort_column:
+                    data = data.sort_values(by=sort_column, ascending=(sort_order == 'asc'))
                 return render_template('user.html', data=data.to_html())
 
             try:
