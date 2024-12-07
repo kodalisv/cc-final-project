@@ -150,9 +150,9 @@ def main(uid):
 
 def get_data(query=None, args=()):
     """Fetch data from the database and return as a Pandas DataFrame."""
-    q1 = "what were the highest and lowest temperatures for this month in the previous years"
-    q2 = "what was the average wind speed for hot days and cold days each month"
-    q3 = "what was the coldest day this month across all years"
+    q1 = "what were the highest and lowest temperatures for this month in the previous years?"
+    q2 = "what was the average wind speed for hot days and cold days each month?"
+    q3 = "what was the coldest day this month across all years?"
     
     responses = {
         q1 : ("SELECT YEAR(DATE) AS YEAR, MAX(TEMP) AS MAX_TEMP, MIN(TEMP) AS MIN_TEMP FROM " +\
@@ -165,7 +165,11 @@ def get_data(query=None, args=()):
             "MONTH(DATE) AS MONTH FROM dbo.HS_WEATHER WHERE TEMP < %s GROUP BY MONTH(DATE)) B ON A.MONTH = B.MONTH;",
             ("MONTH", "HOT_DAYS", "COLD_DAYS"), "bar", "", "Wind Speed (knots)",
             "Average wind speed for hot and cold days each month"),
-        q3: 
+        q3: ("SELECT A.YEAR, B.DAY FROM (SELECT MIN(TEMP) AS TEMP, YEAR(DATE) AS YEAR FROM dbo.HS_WEATHER " +\
+            "WHERE MONTH(DATE) = MONTH(GETDATE()) GROUP BY YEAR(DATE)) A JOIN (SELECT TEMP, " +\
+            "DAY(DATE) AS DAY, YEAR(DATE) AS YEAR FROM dbo.HS_WEATHER) B ON A.YEAR = B.YEAR " +\
+            "AND A.TEMP = B.TEMP;", ("YEAR", "DAY"), "bar", "", "",
+            "Coldest day this month across all years")
         
     }
     try:
