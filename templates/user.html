@@ -4,34 +4,40 @@
 <body>
 <h1>User Webpage</h1>
 <!-- Chat Box -->
-<div id="chat-box" style="display:none;">
-    <h3>Ask your questions below:<br>
-        Enter 'help' for a list of questions to ask</h3>
-    <input type="text" id="question" placeholder="Enter your question"><br>
-    <button type="button" onclick="sendQuestion()">Ask</button>
-    <p id="response"></p>
-    <br>
-    <button type="button" onclick="endChat()">End Chat</button>
+<h3>Ask your questions below:<br>
+    Enter 'help' for a list of questions to ask</h3>
+<form id="queryForm">
+    <input type="text" id="queryInput" name="query" placeholder="Enter SQL query" required>
+    <button type="submit">Submit</button>
+</form>
+<div id="queryChart">
+    <!-- Updated chart will appear here -->
 </div>
 
 <script>
-    function startChat() {
-        document.getElementById('user-form').style.display = 'none';
-        document.getElementById('chat-box').style.display = 'block';
-    }
+    document.getElementById('queryForm').addEventListener('submit', async (event) => {
+            event.preventDefault();
+            const queryInput = document.getElementById('queryInput');
+            const response = await fetch('/query', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ query: queryInput.value })
+            });
 
-    function sendQuestion() {
-        const question = document.getElementById('question').value;
-        fetch('/ask', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({ question })
-        })
-        .then(response => response.json())
-        .then(data => {
-            document.getElementById('response').innerText = data.answer;
+            const queryChart = document.getElementById('queryChart');
+            queryChart.innerHTML = '';
+
+            if (response.headers.get('Content-Type').includes('image/png')) {
+                const img = document.createElement('img');
+                img.src = URL.createObjectURL(await response.blob());
+                img.alt = 'Query Chart';
+                queryChart.appendChild(img);
+            } else {
+                const error = await response.json();
+                queryChart.innerHTML = `<p style="color: red;">${error.error}</p>`;
+            }
         });
-    }
+
 </script>
 
 </body>

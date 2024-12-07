@@ -102,24 +102,29 @@ def main(uid):
         return render_template('user.html')
 
 
-@app.route('/ask', methods=['POST'])
-def ask():
-    data = request.json
-    question = data.get("question", "").lower()
+def get_data(query=None, args=()):
+    """Fetch data from the database and return as a Pandas DataFrame."""
     responses = {
-        "does the college have a football team?": "1",
-        "does it offer a computer science major?": "2",
-        "what is the in-state tuition?": "3",
-        "does it provide on-campus housing?": "3",
-        "help": """Try asking me questions such as:\n 
-                Does the college have a football team?\n
-                Does it offer a Computer Science major?\n
-                What is the in-state tuition?\n
-                Does it provide on-campus housing?"""
+        "what were the highest and lowest temperatures for this month "
+        "in the previous years": "SELECT MAX(TEMP) AS MAX_TEMP, MIN(TEMP) AS MIN_TEMP FROM "
+                                "(SELECT TEMP, DATE FROM dbo.HS_WEATHER WHERE MONTH(DATE) = MONTH(GETDATE()) "
+                                "AND YEAR(DATE) = YEAR(GETDATE()) - 1) LM;"
     }
-    return jsonify({
-        "answer": responses.get(question, "IDK bro, try Google or typing help for a list of questions I can answer")})
+    query = responses.get(query, "")
+    return execute_query(query, args)
 
+@app.route('/query', methods=['POST'])
+def query():
+    """Handle user queries and return data as chart values."""
+    user_query = request.json.get('query')
+    try:
+        data = get_data(user_query)
+        categories = data['MAX_TEMP'].tolist()
+        values = data['MIN_TEMP'].tolist()
+        response = {"categories": categories, "values": values}
+    except Exception as e:
+        response = {"error": str(e)}
+    return response
 
 
 @app.route("/predict/<uid>/<year>/<month>/<day>")
