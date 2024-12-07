@@ -1,29 +1,19 @@
-import requests
+# importing package 
+import matplotlib.pyplot as plt 
+import pandas as pd 
+import matplotlib.pyplot as plt
 
-def get_posts():
-    url = 'https://jsonplaceholder.typicode.com/posts'
+# create data 
+df = pd.DataFrame([[60, 30, 2000], [70, 20, 2001], [60, 30, 2002]], 
+				columns=['Max_temp', 'Min_temp', 'Year']) 
+# view data 
+print(df) 
 
-    try:
-        response = requests.get(url)
-
-        if response.status_code == 200:
-            posts = response.json()
-            return posts
-        else:
-            print('Error:', response.status_code)
-            return None
-    except requests.exceptions.RequestException as e:
-        print('Error:', e)
-        return None
-
-def main():
-    posts = get_posts()
-
-    if posts:
-        print('First Post Title:', posts[0]['title'])
-        print('First Post Body:', posts[0]['body'])
-    else:
-        print('Failed to fetch posts from API.')
-
-if __name__ == '__main__':
-    main()
+df.plot(x=df.columns[2], 
+        kind='bar', 
+        stacked=False, 
+        title='Grouped Bar Graph with dataframe') 
+plt.xticks(rotation=0, ha='right')
+plt.xlabel("temp")
+plt.ylabel("Temp")
+plt.show()

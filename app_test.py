@@ -154,37 +154,47 @@ def get_data(query=None, args=()):
     q2 = ""
     
     responses = {
-        q1 : "SELECT MAX(TEMP) AS MAX_TEMP, MIN(TEMP) AS MIN_TEMP FROM " +\
-        "(SELECT TEMP, DATE FROM dbo.HS_WEATHER WHERE MONTH(DATE) = MONTH(GETDATE()) " +\
-        "AND YEAR(DATE) = YEAR(GETDATE()) - 1) LM;"
+        q1 : ("SELECT YEAR(DATE) AS YEAR, MAX(TEMP) AS MAX_TEMP, MIN(TEMP) AS MIN_TEMP FROM " +\
+        "(SELECT TEMP, DATE FROM dbo.HS_WEATHER WHERE MONTH(DATE) = MONTH(GETDATE())) LM " +\
+        "GROUP BY YEAR(DATE);", ("YEAR", "MAX_TEMP", "MIN_TEMP"), "bar", "", "Temperature (F)", 
+        "Previous Years Temperature chart")
     }
-    cols = {
-        q1: ("MAX_TEMP", "MIN_TEMP")
-    }
+
+    
+    
     
     try:
-        sql_query = responses[query]
-        sql_cols = cols[query]
+        quest = responses[query]
+        results = execute_query(quest[0], args)
+        cols = quest[1]
+        ctype = quest[2]
+        x_title = quest[3]
+        y_title = quest[4]
+        c_title = quest[5]
     except KeyError as e:
-        sql_query = "Invalid Question"
-        sql_cols = set()
-    print(query, sql_query, sql_cols)
+        results = []
+        cols = set()
+        ctype = ""
+        x_title = ""
+        y_title = ""
+        c_title = ""
     
-    return execute_query(sql_query, args), sql_cols
+    return results, cols, ctype, x_title, y_title, c_title
 
-def get_chart(data, cols, ctype):
+def get_chart(data, cols, ctype = "bar", x_title="", y_title="", c_title=""):
     """Generate a chart using Matplotlib."""
     df = pd.DataFrame.from_records(data, columns=cols)
-    plt.figure(figsize=(10, 6))
+    emp = lambda x, y: x if x != "" else y
     
     match ctype:
         case "bar":
-            plt.bar(df[cols[0]], df[cols[1]], color='skyblue')
-            plt.title('Data Chart', fontsize=16)
-            plt.xlabel(cols[0], fontsize=14)
-            plt.ylabel(cols[1], fontsize=14)
-            plt.xticks(rotation=45, ha='right')
-            plt.tight_layout()
+            df.plot(x=cols[0], 
+                    kind=ctype, 
+                    stacked=False, 
+                    title=emp(c_title,'Data Chart'),
+                    x_title=emp(x_title, cols[1]),
+                    y_title=emp(y_title, cols[2]))
+            plt.xticks(rotation=0, ha='right')
 
     img = io.BytesIO()
     plt.savefig(img, format='png')
@@ -200,7 +210,7 @@ def query():
     print("query: {}".format(user_query))
     try:
         data, cols = get_data(user_query)
-        chart = get_chart(data, cols,'bar')
+        chart = get_chart(data, cols,'bar', y_title='temp')
         return send_file(chart, mimetype='image/png')
     except Exception as e:
         response = {"error": str(e)}
