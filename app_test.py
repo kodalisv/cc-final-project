@@ -94,6 +94,14 @@ def register():
                      (maxtemp, mintemp, userid))
     return redirect("/user/{}".format(userid))
 
+# Register user in database
+@app.route('/login', methods=['POST'])
+def login():
+    username = request.form.get("uname")
+    password = request.form.get("pword")
+    userid = getuid(username, password)
+    return redirect("/user/{}".format(userid))
+
 @app.route('/user/<uid>')
 def main(uid):
     if uid == -1:
