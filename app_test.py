@@ -97,11 +97,32 @@ def register():
                      (maxtemp, mintemp, userid))
     return redirect("/user/{}".format(userid))
 
-@app.route('/user/<uid>')
+@app.route('/user/<uid>', methods=['GET', 'POST'])
 def main(uid):
     if uid == -1:
         abort(404)
     else:
+        if request.method == 'POST':
+            file = request.files['csv_file']
+            if file.filename == '':
+                cursor, connection = get_db()
+                weatherResults = execute_query("SELECT * FROM dbo.HS_WEATHER;")
+                columnNames = [column[0] for column in cursor.description]
+                data = pd.DataFrame.from_records(weatherResults, columns=columnNames)
+                return render_template('user.html', data=data.to_html())
+
+            try:
+                df = pd.read_csv(file)
+                # Allow sorting
+                sort_column = request.form.get('sort_column')
+                sort_order = request.form.get('sort_order', 'asc')
+
+                if sort_column:
+                    df = df.sort_values(by=sort_column, ascending=(sort_order == 'asc'))
+                # Process the DataFrame here (e.g., display it, save it to a database)
+                return render_template('user.html', data=df.to_html())
+            except Exception as e:
+                return f'Error processing file: {e}'
         return render_template('user.html')
 
 @app.route("/predict/<uid>")
