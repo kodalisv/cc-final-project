@@ -84,11 +84,12 @@ def register():
     password = request.form.get("pword")
     maxtemp = int(request.form.get("maxt"))
     mintemp = int(request.form.get("mint"))
+    email = request.form.get("email")
     print(username, password, maxtemp, mintemp)
 
     userid = getuid(username, password)
     if userid == -1:
-        insert_query("INSERT INTO dbo.users (uname, pword, maxt, mint) VALUES (%s, %s, %s, %s)", (username, password, maxtemp, mintemp))
+        insert_query("INSERT INTO dbo.users (uname, pword, maxt, mint, email) VALUES (%s, %s, %s, %s, %s)", (username, password, maxtemp, mintemp, email))
         userid = getuid(username, password)
     else:
         insert_query("UPDATE dbo.users SET maxt = %s, mint = %s WHERE id = %s",
