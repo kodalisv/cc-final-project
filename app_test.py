@@ -103,7 +103,7 @@ def login():
     userid = getuid(username, password)
     return redirect("/user/{}".format(userid))
 
-@app.route('/user/<uid>')
+@app.route('/user/<uid>', methods=['GET', 'POST'])
 def main(uid):
     if uid == -1:
         return "<h1>User info</h1> Incorrect username or password"
