@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, g, redirect, send_from_directory, abort
+from flask import Flask, render_template, request, g, redirect, send_from_directory, abort, jsonify
 import pymssql as sql
 import os
 import pandas as pd
@@ -53,8 +53,6 @@ def insert_query(query, args=()):
     conn.commit()
     return
 
-
-
 # Disconnect from database
 @app.teardown_appcontext
 def close_connection(exception):
@@ -99,9 +97,30 @@ def register():
 @app.route('/user/<uid>')
 def main(uid):
     if uid == -1:
-        abort(404)
+        return "<h1>User info</h1> Incorrect username or password"
     else:
         return render_template('user.html')
+
+
+@app.route('/ask', methods=['POST'])
+def ask():
+    data = request.json
+    question = data.get("question", "").lower()
+    responses = {
+        "does the college have a football team?": "1",
+        "does it offer a computer science major?": "2",
+        "what is the in-state tuition?": "3",
+        "does it provide on-campus housing?": "3",
+        "help": """Try asking me questions such as:\n 
+                Does the college have a football team?\n
+                Does it offer a Computer Science major?\n
+                What is the in-state tuition?\n
+                Does it provide on-campus housing?"""
+    }
+    return jsonify({
+        "answer": responses.get(question, "IDK bro, try Google or typing help for a list of questions I can answer")})
+
+
 
 @app.route("/predict/<uid>/<year>/<month>/<day>")
 def predict(uid, year, month, day):

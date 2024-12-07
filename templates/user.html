@@ -3,5 +3,36 @@
 <title>Webpage</title>
 <body>
 <h1>User Webpage</h1>
+<!-- Chat Box -->
+<div id="chat-box" style="display:none;">
+    <h3>Ask your questions below:<br>
+        Enter 'help' for a list of questions to ask</h3>
+    <input type="text" id="question" placeholder="Enter your question"><br>
+    <button type="button" onclick="sendQuestion()">Ask</button>
+    <p id="response"></p>
+    <br>
+    <button type="button" onclick="endChat()">End Chat</button>
+</div>
+
+<script>
+    function startChat() {
+        document.getElementById('user-form').style.display = 'none';
+        document.getElementById('chat-box').style.display = 'block';
+    }
+
+    function sendQuestion() {
+        const question = document.getElementById('question').value;
+        fetch('/ask', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ question })
+        })
+        .then(response => response.json())
+        .then(data => {
+            document.getElementById('response').innerText = data.answer;
+        });
+    }
+</script>
+
 </body>
 </html>
