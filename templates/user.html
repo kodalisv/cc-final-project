@@ -40,5 +40,31 @@
 
 </script>
 
+    <h2>Upload CSV File</h2>
+    <h3>Please upload only CSV files from the NCEI database! Otherwise, an error will occur.</h3>
+    <h3>To sort on the data currently in the database, upload no file and click 'Sort'</h3>
+    <form method="POST" enctype="multipart/form-data">
+        <input type="file" name="csv_file">
+        <br>
+        <label for="sort_column">Sort by:</label>
+        <select name="sort_column">
+            <option value="TEMP">Temperature</option>
+            <option value="PRCP">Precipitation</option>
+            <option value="WDSP">Wind Speed</option>
+            <option value="MIN">Minimum Temperature</option>
+            <option value="MAX">Maximum Temperature</option>
+            <option value="FRSHTT">Extreme Weather (FRSHTT)</option>
+            </select>
+        <select name="sort_order">
+            <option value="asc">Ascending</option>
+            <option value="desc">Descending</option>
+        </select>
+        <br>
+        <input type="submit" value="Sort">
+    </form>
+
+    {% if data %}
+        {{ data | safe }}
+    {% endif %}
 </body>
 </html>

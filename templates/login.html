@@ -3,71 +3,47 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Weather Recommendations</title>
+    <title>Ohio Weather</title>
     <style>
         body {
             font-family: Arial, sans-serif;
-            margin: 0;
-            padding: 0;
-            background: linear-gradient(to bottom, #87ceeb, #f0f8ff);
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            height: 100vh;
+            background-color: #f4f4f4;
+            padding: 20px;
         }
-
-        header {
-            background-color: #4CAF50;
-            width: 100%;
-            padding: 10px;
-            text-align: center;
-            color: white;
-            font-size: 24px;
-            font-weight: bold;
-        }
-
         .container {
             max-width: 600px;
-            background: white;
+            margin: 0 auto;
+            background: #fff;
             padding: 20px;
-            margin: 20px auto;
-            border-radius: 10px;
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
         }
-
-        .form-group {
-            margin-bottom: 15px;
+        h1, h2 {
+            text-align: center;
         }
-
-        label {
-            display: block;
-            margin-bottom: 5px;
-            font-weight: bold;
-        }
-
-        input, button {
+        form input, form button {
             width: 100%;
             padding: 10px;
-            border: 1px solid #ddd;
-            border-radius: 5px;
+            margin: 10px 0;
+            border: 1px solid #ccc;
+            border-radius: 4px;
         }
-
         button {
-            background-color: #4CAF50;
+            background-color: #007bff;
             color: white;
-            cursor: pointer;
+            border: none;
         }
-
         button:hover {
-            background-color: #45a049;
+            background-color: #0056b3;
         }
-
-        .recommendations {
-            margin-top: 20px;
-            padding: 15px;
-            background: #f9f9f9;
-            border-radius: 10px;
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        .message {
+            margin-top: 15px;
+            text-align: center;
+            color: green;
+        }
+        .error {
+            color: red;
+            text-align: center;
         }
     </style>
 </head>
@@ -81,10 +57,6 @@
         <div class="form-group">
             <label for="password">Password:</label>
             <input type="password" id="password" placeholder="Enter your password" required>
-        </div>
-        <div class="form-group">
-            <label for="email">Email:</label>
-            <input type="text" id="email" placeholder="Enter your email address" required>
         </div>
         <button id="loginBtn">Login</button>
     </div>
@@ -109,87 +81,5 @@
             <ul id="recommendationList"></ul>
         </div>
     </div>
-
-    <script>
-        const loginBtn = document.getElementById("loginBtn");
-        const loginContainer = document.getElementById("loginContainer");
-        const mainContainer = document.getElementById("mainContainer");
-        const submitBtn = document.getElementById("submitBtn");
-        const recommendationsDiv = document.getElementById("recommendations");
-        const recommendationList = document.getElementById("recommendationList");
-
-        loginBtn.addEventListener("click", () => {
-            const username = document.getElementById("username").value.trim();
-            const password = document.getElementById("password").value.trim();
-
-            if (username && password) {
-                loginContainer.style.display = "none";
-                mainContainer.style.display = "block";
-            } else {
-                alert("Please enter both username and password.");
-            }
-        });
-
-        submitBtn.addEventListener("click", async () => {
-            const location = document.getElementById("location").value.trim();
-            const minTemp = parseFloat(document.getElementById("minComfortableTemp").value);
-            const maxTemp = parseFloat(document.getElementById("maxComfortableTemp").value);
-
-            if (!location || isNaN(minTemp) || isNaN(maxTemp) || minTemp > maxTemp) {
-                alert("Please fill out all required fields and ensure the temperature range is valid.");
-                return;
-            }
-
-            // Fetch weather data (Simulated for demonstration)
-            const weatherData = await fetchWeatherData(location);
-
-            // Display Recommendations
-            recommendationsDiv.style.display = "block";
-            recommendationList.innerHTML = "";
-            generateRecommendations(weatherData, minTemp, maxTemp).forEach(rec => {
-                const li = document.createElement("li");
-                li.textContent = rec;
-                recommendationList.appendChild(li);
-            });
-        });
-
-        async function fetchWeatherData(location) {
-            // Simulated weather data
-            return {
-                temperature: Math.floor(Math.random() * 120), // Random temperature between 0°F and 120°F
-                condition: ["Sunny", "Rainy", "Snowy"][Math.floor(Math.random() * 3)]
-            };
-        }
-
-        function generateRecommendations(weatherData, minTemp, maxTemp) {
-            const recommendations = [];
-            const temp = weatherData.temperature;
-
-            if (temp < 32) {
-                recommendations.push("It's extremely cold. Dress warmly with a heavy jacket and muffler.");
-            } else if (temp >= 32 && temp < minTemp) {
-                recommendations.push("It's chilly outside. Wear a jacket.");
-            } else if (temp >= minTemp && temp < maxTemp) {
-                recommendations.push("The weather is mild. Light clothing is sufficient.");
-            } else if (temp >= maxTemp && temp < 85) {
-                recommendations.push("It's warm outside. Use a hat and stay cool.");
-                recommendations.push("Carry an umbrella for sun protection.");
-            } else if (temp >= 85 && temp < 100) {
-                recommendations.push("It's very hot. Stay hydrated and use sunscreen.");
-            } else if (temp >= 100) {
-                recommendations.push("Extreme heat warning! Avoid outdoor activities. Stay hydrated.");
-            }
-            recommendations.push("Current temp: " + temp + " F.");
-            if (temp < minTemp || temp > maxTemp) {
-                recommendations.push("The current temperature is outside your comfortable range. Plan accordingly.");
-            }
-
-            if (weatherData.condition === "Rainy") {
-                recommendations.push("It's rainy. Carry an umbrella and wear a raincoat.");
-            }
-
-            return recommendations;
-        }
-    </script>
 </body>
 </html>

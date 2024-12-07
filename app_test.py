@@ -3,8 +3,11 @@ import pymssql as sql
 import os
 import pandas as pd
 from sklearn import model_selection, ensemble
+import datetime
 import matplotlib.pyplot as plt
 import io
+
+#app = Flask(__name__)
 
 # Database connection details
 DB_SERVER = 'ccfinalprojectserver.database.windows.net'
@@ -80,14 +83,14 @@ def index():
 def register():
     username = request.form.get("uname")
     password = request.form.get("pword")
+    email = request.form.get("email")
     maxtemp = int(request.form.get("maxt"))
     mintemp = int(request.form.get("mint"))
-    email = request.form.get("email")
-    print(username, password, maxtemp, mintemp)
+    print(username, password, email, maxtemp, mintemp)
 
     userid = getuid(username, password)
     if userid == -1:
-        insert_query("INSERT INTO dbo.users (uname, pword, maxt, mint, email) VALUES (%s, %s, %s, %s, %s)", (username, password, maxtemp, mintemp, email))
+        insert_query("INSERT INTO dbo.users (uname, pword, email, maxt, mint) VALUES (%s, %s, %s, %s, %s)", (username, password, email, maxtemp, mintemp))
         userid = getuid(username, password)
     else:
         insert_query("UPDATE dbo.users SET maxt = %s, mint = %s WHERE id = %s",
@@ -102,11 +105,38 @@ def login():
     userid = getuid(username, password)
     return redirect("/user/{}".format(userid))
 
-@app.route('/user/<uid>')
+@app.route('/user/<uid>', methods=['GET', 'POST'])
 def main(uid):
     if uid == -1:
         return "<h1>User info</h1> Incorrect username or password"
     else:
+        if request.method == 'POST':
+            file = request.files['csv_file']
+            if file.filename == '':
+                cursor, connection = get_db()
+                weatherResults = execute_query("SELECT * FROM dbo.HS_WEATHER;")
+                columnNames = [column[0] for column in cursor.description]
+                data = pd.DataFrame.from_records(weatherResults, columns=columnNames)
+
+                sort_column = request.form.get('sort_column')
+                sort_order = request.form.get('sort_order', 'asc')
+
+                if sort_column:
+                    data = data.sort_values(by=sort_column, ascending=(sort_order == 'asc'))
+                return render_template('user.html', data=data.to_html())
+
+            try:
+                df = pd.read_csv(file)
+                # Allow sorting
+                sort_column = request.form.get('sort_column')
+                sort_order = request.form.get('sort_order', 'asc')
+
+                if sort_column:
+                    df = df.sort_values(by=sort_column, ascending=(sort_order == 'asc'))
+                # Process the DataFrame here (e.g., display it, save it to a database)
+                return render_template('user.html', data=df.to_html())
+            except Exception as e:
+                return f'Error processing file: {e}'
         return render_template('user.html')
 
 
@@ -170,16 +200,23 @@ def query():
     return response
 
 
-@app.route("/predict/<uid>/<year>/<month>/<day>")
-def predict(uid, year, month, day):
+@app.route("/predict/<uid>")
+def predict(uid):
+    cursor, connection = get_db()
+    currentDate = datetime.datetime.now()
+    year = currentDate.year
+    month = currentDate.month
+    day = currentDate.day
     # Execute a query
-    results = execute_query("SELECT * FROM dbo.HS_WEATHER;")
-
+    weatherResults = execute_query("SELECT * FROM dbo.HS_WEATHER;")
     # Get column names
-    columnNames = [column[0] for column in results]
+    columnNames = [column[0] for column in cursor.description]
+    # Get user data
+    coldLimit = execute_query("SELECT mint FROM dbo.users WHERE id=%s;", (uid))
+    hotLimit = execute_query("SELECT maxt FROM dbo.users WHERE id=%s;", (uid))
 
     # Import data
-    data = pd.DataFrame.from_records(results, columns=columnNames)
+    data = pd.DataFrame.from_records(weatherResults, columns=columnNames)
 
     # Modify data
     # Separate dates first
@@ -224,8 +261,6 @@ def predict(uid, year, month, day):
     rainForest.fit(X_train_rain, y_train_rain)
 
     # Predict temperature
-    coldLimit = 40
-    hotLimit = 80
     # Filter historic data to only matching date
     prevData = data.loc[data["DAY"] == day]
     prevData = prevData.loc[prevData['MONTH'] == month]
