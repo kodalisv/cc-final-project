@@ -86,6 +86,7 @@ def register():
     email = request.form.get("email")
     maxtemp = int(request.form.get("maxt"))
     mintemp = int(request.form.get("mint"))
+    email = request.form.get("email")
     print(username, password, email, maxtemp, mintemp)
 
     userid = getuid(username, password)
