@@ -42,7 +42,7 @@ def configure(user):
         newHotLimit = request.form.get("hotlimit")
         newColdLimit = request.form.get("coldlimit")
 
-        # Example database query
+        # Update the user's configuration
         try:
             conn = pymssql.connect(DB_SERVER, DB_USER, DB_PASSWORD, DB_NAME)
             cursor = conn.cursor(as_dict=True)
