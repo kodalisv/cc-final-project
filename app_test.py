@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, g, redirect, send_from_directory, abort
+from flask import Flask, render_template, request, g, redirect, send_from_directory, abort, jsonify
 import pymssql as sql
 import os
 import pandas as pd
@@ -54,8 +54,6 @@ def insert_query(query, args=()):
     conn.commit()
     return
 
-
-
 # Disconnect from database
 @app.teardown_appcontext
 def close_connection(exception):
@@ -97,10 +95,18 @@ def register():
                      (maxtemp, mintemp, userid))
     return redirect("/user/{}".format(userid))
 
-@app.route('/user/<uid>', methods=['GET', 'POST'])
+# Register user in database
+@app.route('/login', methods=['POST'])
+def login():
+    username = request.form.get("uname")
+    password = request.form.get("pword")
+    userid = getuid(username, password)
+    return redirect("/user/{}".format(userid))
+
+@app.route('/user/<uid>')
 def main(uid):
     if uid == -1:
-        abort(404)
+        return "<h1>User info</h1> Incorrect username or password"
     else:
         if request.method == 'POST':
             file = request.files['csv_file']
@@ -124,6 +130,32 @@ def main(uid):
             except Exception as e:
                 return f'Error processing file: {e}'
         return render_template('user.html')
+
+
+def get_data(query=None, args=()):
+    """Fetch data from the database and return as a Pandas DataFrame."""
+    responses = {
+        "what were the highest and lowest temperatures for this month "
+        "in the previous years": "SELECT MAX(TEMP) AS MAX_TEMP, MIN(TEMP) AS MIN_TEMP FROM "
+                                "(SELECT TEMP, DATE FROM dbo.HS_WEATHER WHERE MONTH(DATE) = MONTH(GETDATE()) "
+                                "AND YEAR(DATE) = YEAR(GETDATE()) - 1) LM;"
+    }
+    query = responses.get(query, "")
+    return execute_query(query, args)
+
+@app.route('/query', methods=['POST'])
+def query():
+    """Handle user queries and return data as chart values."""
+    user_query = request.json.get('query')
+    try:
+        data = get_data(user_query)
+        categories = data['MAX_TEMP'].tolist()
+        values = data['MIN_TEMP'].tolist()
+        response = {"categories": categories, "values": values}
+    except Exception as e:
+        response = {"error": str(e)}
+    return response
+
 
 @app.route("/predict/<uid>")
 def predict(uid):

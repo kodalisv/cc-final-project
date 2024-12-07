@@ -3,6 +3,43 @@
 <title>Webpage</title>
 <body>
 <h1>User Webpage</h1>
+<!-- Chat Box -->
+<h3>Ask your questions below:<br>
+    Enter 'help' for a list of questions to ask</h3>
+<form id="queryForm">
+    <input type="text" id="queryInput" name="query" placeholder="Enter SQL query" required>
+    <button type="submit">Submit</button>
+</form>
+<div id="queryChart">
+    <!-- Updated chart will appear here -->
+</div>
+
+<script>
+    document.getElementById('queryForm').addEventListener('submit', async (event) => {
+            event.preventDefault();
+            const queryInput = document.getElementById('queryInput');
+            const response = await fetch('/query', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ query: queryInput.value })
+            });
+
+            const queryChart = document.getElementById('queryChart');
+            queryChart.innerHTML = '';
+
+            if (response.headers.get('Content-Type').includes('image/png')) {
+                const img = document.createElement('img');
+                img.src = URL.createObjectURL(await response.blob());
+                img.alt = 'Query Chart';
+                queryChart.appendChild(img);
+            } else {
+                const error = await response.json();
+                queryChart.innerHTML = `<p style="color: red;">${error.error}</p>`;
+            }
+        });
+
+</script>
+
     <h2>Upload CSV File</h2>
     <h3>Please upload only CSV files from the NCEI database! Otherwise, an error will occur.</h3>
     <h3>To sort on the data currently in the database, upload no file and click 'Sort'</h3>
