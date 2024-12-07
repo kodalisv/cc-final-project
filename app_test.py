@@ -86,7 +86,6 @@ def register():
     email = request.form.get("email")
     maxtemp = int(request.form.get("maxt"))
     mintemp = int(request.form.get("mint"))
-    email = request.form.get("email")
     print(username, password, email, maxtemp, mintemp)
 
     userid = getuid(username, password)
@@ -107,17 +106,18 @@ def main(uid):
 
 @app.route("/predict/<uid>")
 def predict(uid):
+    cursor, connection = get_db()
     currentDate = datetime.datetime.now()
     year = currentDate.year
     month = currentDate.month
     day = currentDate.day
     # Execute a query
     weatherResults = execute_query("SELECT * FROM dbo.HS_WEATHER;")
-    coldLimit = execute_query("SELECT mint FROM dbo.users WHERE id=?;", uid)
-    hotLimit = execute_query("SELECT maxt FROM dbo.users WHERE id=?;", uid)
-
     # Get column names
-    columnNames = [column[0] for column in weatherResults]
+    columnNames = [column[0] for column in cursor.description]
+    # Get user data
+    coldLimit = execute_query("SELECT mint FROM dbo.users WHERE id=%s;", (uid))
+    hotLimit = execute_query("SELECT maxt FROM dbo.users WHERE id=%s;", (uid))
 
     # Import data
     data = pd.DataFrame.from_records(weatherResults, columns=columnNames)
