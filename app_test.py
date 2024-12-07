@@ -90,10 +90,10 @@ def register():
 
     userid = getuid(username, password)
     if userid == -1:
-        insert_query("INSERT INTO dbo.users (uname, pword, email, maxt, mint) VALUES (%s, %s, %s, %s, %s)", (username, password, email, maxtemp, mintemp))
+        execute_query("INSERT INTO dbo.users (uname, pword, email, maxt, mint) VALUES (%s, %s, %s, %s, %s)", (username, password, email, maxtemp, mintemp))
         userid = getuid(username, password)
     else:
-        insert_query("UPDATE dbo.users SET maxt = %s, mint = %s WHERE id = %s",
+        execute_query("UPDATE dbo.users SET maxt = %s, mint = %s WHERE id = %s",
                      (maxtemp, mintemp, userid))
     return redirect("/user/{}".format(userid))
 
