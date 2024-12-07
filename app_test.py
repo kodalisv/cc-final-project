@@ -37,8 +37,6 @@ def get_db():
         print("New connection")
         conn = g.conn = connect_to_database()
         db = g.db = conn.cursor() 
-        #print(conn, db)
-        #print(conn._conn.connected)
     return db, conn
 
 # Run queries
@@ -146,8 +144,7 @@ def get_data(query=None, args=()):
     q2 = ""
     
     responses = {
-        q1 : "SELECT MAX(TEMP) AS MAX_TEMP, " +\
-        "MIN(TEMP) AS MIN_TEMP FROM " +\
+        q1 : "SELECT MAX(TEMP) AS MAX_TEMP, MIN(TEMP) AS MIN_TEMP FROM " +\
         "(SELECT TEMP, DATE FROM dbo.HS_WEATHER WHERE MONTH(DATE) = MONTH(GETDATE()) " +\
         "AND YEAR(DATE) = YEAR(GETDATE()) - 1) LM;"
     }
