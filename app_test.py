@@ -1,10 +1,10 @@
-from flask import Flask, render_template, request, g, redirect, send_from_directory, abort, jsonify
+from flask import Flask, render_template, request, g, redirect, send_file
 import pymssql as sql
 import os
 import pandas as pd
 from sklearn import model_selection, ensemble
-
-#app = Flask(__name__)
+import matplotlib.pyplot as plt
+import io
 
 # Database connection details
 DB_SERVER = 'ccfinalprojectserver.database.windows.net'
@@ -34,8 +34,8 @@ def get_db():
         print("New connection")
         conn = g.conn = connect_to_database()
         db = g.db = conn.cursor() 
-        print(conn, db)
-        print(conn._conn.connected)
+        #print(conn, db)
+        #print(conn._conn.connected)
     return db, conn
 
 # Run queries
@@ -47,9 +47,9 @@ def execute_query(query, args=()):
     return rows
 
 # Run other queries
-def insert_query(query, args=()):
+def insert_many(query, args=[]):
     db, conn = get_db()
-    db.execute(query, args)
+    db.executemany(query, args)
     conn.commit()
     return
 
@@ -112,24 +112,59 @@ def main(uid):
 
 def get_data(query=None, args=()):
     """Fetch data from the database and return as a Pandas DataFrame."""
+    q1 = "what were the highest and lowest temperatures for this month in the previous years"
+    q2 = ""
+    
     responses = {
-        "what were the highest and lowest temperatures for this month "
-        "in the previous years": "SELECT MAX(TEMP) AS MAX_TEMP, MIN(TEMP) AS MIN_TEMP FROM "
-                                "(SELECT TEMP, DATE FROM dbo.HS_WEATHER WHERE MONTH(DATE) = MONTH(GETDATE()) "
-                                "AND YEAR(DATE) = YEAR(GETDATE()) - 1) LM;"
+        q1 : "SELECT MAX(TEMP) AS MAX_TEMP, " +\
+        "MIN(TEMP) AS MIN_TEMP FROM " +\
+        "(SELECT TEMP, DATE FROM dbo.HS_WEATHER WHERE MONTH(DATE) = MONTH(GETDATE()) " +\
+        "AND YEAR(DATE) = YEAR(GETDATE()) - 1) LM;"
     }
-    query = responses.get(query, "")
-    return execute_query(query, args)
+    cols = {
+        q1: ("MAX_TEMP", "MIN_TEMP")
+    }
+    
+    try:
+        sql_query = responses[query]
+        sql_cols = cols[query]
+    except KeyError as e:
+        sql_query = "Invalid Question"
+        sql_cols = set()
+    print(query, sql_query, sql_cols)
+    
+    return execute_query(sql_query, args), sql_cols
+
+def get_chart(data, cols, ctype):
+    """Generate a chart using Matplotlib."""
+    df = pd.DataFrame.from_records(data, columns=cols)
+    plt.figure(figsize=(10, 6))
+    
+    match ctype:
+        case "bar":
+            plt.bar(df[cols[0]], df[cols[1]], color='skyblue')
+            plt.title('Data Chart', fontsize=16)
+            plt.xlabel(cols[0], fontsize=14)
+            plt.ylabel(cols[1], fontsize=14)
+            plt.xticks(rotation=45, ha='right')
+            plt.tight_layout()
+
+    img = io.BytesIO()
+    plt.savefig(img, format='png')
+    img.seek(0)
+    plt.close()
+    return img
+
 
 @app.route('/query', methods=['POST'])
 def query():
     """Handle user queries and return data as chart values."""
-    user_query = request.json.get('query')
+    user_query = request.json.get('query').lower()
+    print("query: {}".format(user_query))
     try:
-        data = get_data(user_query)
-        categories = data['MAX_TEMP'].tolist()
-        values = data['MIN_TEMP'].tolist()
-        response = {"categories": categories, "values": values}
+        data, cols = get_data(user_query)
+        chart = get_chart(data, cols,'bar')
+        return send_file(chart, mimetype='image/png')
     except Exception as e:
         response = {"error": str(e)}
     return response
