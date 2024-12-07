@@ -1,8 +1,71 @@
 <!DOCTYPE html>
-<html>
-<title>Webpage</title>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>User Webpage</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #f0f8ff;
+      margin: 0;
+      padding: 20px;
+      color: #333;
+    }
+    h1 {
+      text-align: center;
+      color: #006400;
+    }
+    h2, h3 {
+      color: #2e8b57;
+    }
+    form {
+      background-color: #ffffff;
+      border-radius: 8px;
+      padding: 20px;
+      margin-bottom: 30px;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      width: 300px;
+      margin: 20px auto;
+    }
+    input[type="text"], input[type="file"], select, input[type="password"] {
+      width: 100%;
+      padding: 12px;
+      margin: 10px 0;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+      box-sizing: border-box; /* Ensures padding does not affect width */
+    }
+    button {
+      background-color: #32cd32;
+      color: white;
+      padding: 12px;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      width: 100%;
+    }
+    button:hover {
+      background-color: #228b22;
+    }
+    .response {
+      text-align: center;
+      margin-top: 20px;
+    }
+    #queryChart {
+      margin-top: 20px;
+      text-align: center;
+    }
+    .error {
+      color: red;
+      text-align: center;
+    }
+  </style>
+</head>
 <body>
+
 <h1>User Webpage</h1>
+
 <!-- Chat Box -->
 <h3>Ask your questions below:<br>
     Enter 'help' for a list of questions to ask</h3>
@@ -34,37 +97,42 @@
                 queryChart.appendChild(img);
             } else {
                 const error = await response.json();
-                queryChart.innerHTML = `<p style="color: red;">${error.error}</p>`;
+                queryChart.innerHTML = `<p class="error">${error.error}</p>`;
             }
         });
-
 </script>
 
-    <h2>Upload CSV File</h2>
-    <h3>Please upload only CSV files from the NCEI database! Otherwise, an error will occur.</h3>
-    <h3>To sort on the data currently in the database, upload no file and click 'Sort'</h3>
-    <form method="POST" enctype="multipart/form-data">
-        <input type="file" name="csv_file">
-        <br>
-        <label for="sort_column">Sort by:</label>
-        <select name="sort_column">
-            <option value="TEMP">Temperature</option>
-            <option value="PRCP">Precipitation</option>
-            <option value="WDSP">Wind Speed</option>
-            <option value="MIN">Minimum Temperature</option>
-            <option value="MAX">Maximum Temperature</option>
-            <option value="FRSHTT">Extreme Weather (FRSHTT)</option>
-            </select>
-        <select name="sort_order">
-            <option value="asc">Ascending</option>
-            <option value="desc">Descending</option>
-        </select>
-        <br>
-        <input type="submit" value="Sort">
-    </form>
+<h2>Upload CSV File</h2>
+<h3>Please upload only CSV files from the NCEI database! Otherwise, an error will occur.</h3>
+<h3>To sort on the data currently in the database, upload no file and click 'Sort'</h3>
+<form method="POST" enctype="multipart/form-data">
+    <input type="file" name="csv_file">
+    <br>
+    <label for="sort_column">Sort by:</label>
+    <select name="sort_column">
+        <option value="TEMP">Temperature</option>
+        <option value="PRCP">Precipitation</option>
+        <option value="WDSP">Wind Speed</option>
+        <option value="MIN">Minimum Temperature</option>
+        <option value="MAX">Maximum Temperature</option>
+        <option value="FRSHTT">Extreme Weather (FRSHTT)</option>
+    </select>
+    <br>
+    <label for="sort_order">Order:</label>
+    <select name="sort_order">
+        <option value="asc">Ascending</option>
+        <option value="desc">Descending</option>
+    </select>
+    <br><br>
+    <button type="submit">Sort</button>
+</form>
 
+<div class="response">
     {% if data %}
+        <h3>Sorted Data:</h3>
         {{ data | safe }}
     {% endif %}
+</div>
+
 </body>
 </html>
