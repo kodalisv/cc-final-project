@@ -1,38 +1,92 @@
 from flask import Flask, render_template, request
 import pymssql
-import pandas as pd
-from sklearn import model_selection, ensemble
-import datetime
 
 app = Flask(__name__)
 
-# Database connection details
-DB_SERVER = 'ccfinalprojectserver.database.windows.net'
-DB_USER = 'finalprojectlogin'
-DB_PASSWORD = 'weatherapp1!'
-DB_NAME = 'ccfinalprojectdatabase'
+# NWS API Base URL
+NWS_API_BASE_URL = "https://api.weather.gov/points"
+
+# Predefined list of major cities in Ohio with their coordinates
+OHIO_CITIES = {
+    "cincinnati": {"lat": 39.1031, "lon": -84.5120},
+    "cleveland": {"lat": 41.4993, "lon": -81.6944},
+    "columbus": {"lat": 39.9612, "lon": -82.9988},
+    "dayton": {"lat": 39.7589, "lon": -84.1916},
+    "toledo": {"lat": 41.6528, "lon": -83.5379},
+    "akron": {"lat": 41.0814, "lon": -81.5190},
+    "youngstown": {"lat": 41.0998, "lon": -80.6495},
+    "mansfield": {"lat": 40.7584, "lon": -82.5154},
+    "springfield": {"lat": 39.9242, "lon": -83.8088},
+}
+
 @app.route("/", methods=["GET", "POST"])
 def login():
     weather_data = None
+    error_message = None
+    recommendations = None
+    entered_city = None
 
     if request.method == "POST":
         username = request.form.get("username")
         password = request.form.get("password")
-        email = request.form.get("email")
+        entered_city = request.form.get("city")  # User input for the city
+        min_temp = request.form.get("min_temp")  # User's minimum comfortable temperature
+        max_temp = request.form.get("max_temp")  # User's maximum comfortable temperature
 
-        # Example database query
-        try:
-            conn = pymssql.connect(DB_SERVER, DB_USER, DB_PASSWORD, DB_NAME)
-            cursor = conn.cursor(as_dict=True)
-            cursor.execute("SELECT WDSP, DATE FROM dbo.HS_WEATHER WHERE TEMP > 76;")
-            weather_data = cursor.fetchall()
-            conn.close()
-        except Exception as e:
-            weather_data = f"Error connecting to database: {e}"
+        if username and password and entered_city and min_temp and max_temp:
+            try:
+                min_temp = float(min_temp)
+                max_temp = float(max_temp)
+                city_key = entered_city.lower().replace(" ", "")  # Normalize input
+
+                if city_key in OHIO_CITIES:
+                    coords = OHIO_CITIES[city_key]
+                    lat, lon = coords["lat"], coords["lon"]
+
+                    # Step 1: Fetch forecast URL
+                    point_url = f"{NWS_API_BASE_URL}/{lat},{lon}"
+                    point_response = requests.get(point_url)
+                    if point_response.status_code != 200:
+                        error_message = f"Error fetching forecast URL for {entered_city}."
+                    else:
+                        point_data = point_response.json()
+                        forecast_url = point_data["properties"]["forecast"]
+
+                        # Step 2: Fetch forecast data
+                        forecast_response = requests.get(forecast_url)
+                        if forecast_response.status_code != 200:
+                            error_message = f"Error fetching forecast data for {entered_city}."
+                        else:
+                            forecast_data = forecast_response.json()
+                            weather_data = forecast_data["properties"]["periods"][0]  # First forecast period
+                            current_temp = weather_data["temperature"]
+                            short_forecast = weather_data["shortForecast"].lower()
+
+                            # Step 3: Generate recommendations
+                            if current_temp < min_temp:
+                                if "snow" in short_forecast:
+                                    recommendations = "It's snowy. Carry a jacket, gloves, and a muffler or scarf."
+                                elif "rain" in short_forecast:
+                                    recommendations = "It's rainy. Carry an umbrella and a jacket."
+                                else:
+                                    recommendations = "It's cool. Carry a jacket and a muffler."
+                            elif current_temp > max_temp:
+                                recommendations = "It's hot. Wear light clothes and a cap."
+                            else:
+                                recommendations = "The weather is comfortable. No special preparation needed."
+                else:
+                    error_message = f"City '{entered_city}' not found in Ohio. Please try a valid Ohio city."
+            except Exception as e:
+                error_message = f"Error: {e}"
+        else:
+            error_message = "Please enter valid login credentials, a city name, and comfortable temperature range."
 
     return render_template(
         "login.html",
-        weather_data=weather_data
+        weather_data=weather_data,
+        recommendations=recommendations,
+        error_message=error_message,
+        entered_city=entered_city
     )
 
 # Let a user configure their account data, including cold/hot limits
