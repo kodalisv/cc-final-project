@@ -120,11 +120,12 @@ def login():
 
 @app.route('/user/<uid>')
 def main(uid):
-    if uid == -1:
+    if int(uid) == -1:
         return "<h1>User info</h1> Incorrect username or password"
     else:
         settemp(uid)
         return render_template('user.html')
+    
 
 @app.route('/user/<uid>', methods=['POST'])
 def uploadcsv(uid):
