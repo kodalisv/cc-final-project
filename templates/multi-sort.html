@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Multilevel Sort UI</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 20px;
+      background-color: #f9f9f9;
+    }
+    .sort-ui {
+      border: 1px solid #ccc;
+      border-radius: 5px;
+      padding: 20px;
+      background: #fff;
+      max-width: 500px;
+      margin: auto;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    }
+    .sort-ui h3 {
+      margin-top: 0;
+    }
+    .criteria-item {
+      display: flex;
+      align-items: center;
+      margin-bottom: 10px;
+    }
+    .criteria-item select {
+      margin-right: 10px;
+      padding: 5px;
+    }
+    .direction label {
+      margin-right: 10px;
+    }
+    .remove {
+      margin-left: auto;
+      background: #e74c3c;
+      color: #fff;
+      border: none;
+      border-radius: 3px;
+      padding: 5px 10px;
+      cursor: pointer;
+    }
+    .remove:hover {
+      background: #c0392b;
+    }
+    .add, .apply, .reset {
+      margin: 10px 5px 0 0;
+      background: #3498db;
+      color: #fff;
+      border: none;
+      border-radius: 3px;
+      padding: 10px 15px;
+      cursor: pointer;
+    }
+    .add:hover, .apply:hover, .reset:hover {
+      background: #2980b9;
+    }
+    .reset {
+      background: #95a5a6;
+    }
+    .reset:hover {
+      background: #7f8c8d;
+    }
+  </style>
+</head>
+<body>
+  <div class="sort-ui">
+    <h3>Sort Options</h3>
+    <button class="reset">Reset</button>
+    <div class="sort-criteria">
+      <div class="criteria-item">
+        <select class="field">
+          <option value="name">Name</option>
+          <option value="date">Date</option>
+          <option value="price">Price</option>
+        </select>
+        <div class="direction">
+          <label><input type="radio" name="direction-1" value="asc" checked> Ascending</label>
+          <label><input type="radio" name="direction-1" value="desc"> Descending</label>
+        </div>
+        <button class="remove">Remove</button>
+      </div>
+    </div>
+    <button class="add">Add Sort Level</button>
+    <button class="apply">Apply Sort</button>
+  </div>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      let criteriaCount = 1;
+
+      // Function to add a new sort level
+      document.querySelector('.add').addEventListener('click', () => {
+        criteriaCount++;
+        const criteriaList = document.querySelector('.sort-criteria');
+        const newCriteria = document.querySelector('.criteria-item').cloneNode(true);
+
+        // Update radio button names to avoid conflicts
+        const radioButtons = newCriteria.querySelectorAll('input[type="radio"]');
+        radioButtons.forEach(radio => {
+          const name = `direction-${criteriaCount}`;
+          radio.name = name;
+        });
+
+        criteriaList.appendChild(newCriteria);
+      });
+
+      // Function to apply sorting
+      document.querySelector('.apply').addEventListener('click', () => {
+        const criteria = [];
+        document.querySelectorAll('.criteria-item').forEach((item, index) => {
+          const field = item.querySelector('.field').value;
+          const direction = item.querySelector(`input[name="direction-${index + 1}"]:checked`).value;
+          criteria.push({ field, direction });
+        });
+        alert(`Sorting by: ${JSON.stringify(criteria, null, 2)}`);
+      });
+
+      // Function to reset all criteria
+      document.querySelector('.reset').addEventListener('click', () => {
+        const criteriaList = document.querySelector('.sort-criteria');
+        criteriaList.innerHTML = '';
+        criteriaCount = 1;
+        const initialCriteria = document.querySelector('.criteria-item').cloneNode(true);
+        criteriaList.appendChild(initialCriteria);
+      });
+
+      // Event delegation for removing criteria
+      document.querySelector('.sort-criteria').addEventListener('click', (e) => {
+        if (e.target.classList.contains('remove')) {
+          const criteriaItem = e.target.closest('.criteria-item');
+          criteriaItem.remove();
+        }
+      });
+    });
+  </script>
+</body>
+</html>
