@@ -172,6 +172,8 @@ def get_data(query=None):
     q3 = "lowest_snow_temp_per_year"
     q4 = "dew_by_day"
     q5 = "rain_by_year"
+    q6 = "predicted_temperature_next_7_days"
+    q7 = "rainy_days_next_10_days"
     
     mint = app.config['MINT']
     maxt = app.config['MAXT']
@@ -195,24 +197,54 @@ def get_data(query=None):
         q5: ("SELECT YEAR(DATE) AS YEAR, COUNT(*) AS RAIN_FREQ FROM dbo.HS_WEATHER WHERE FLOOR(FRSHTT / 10000) % 10 = 1 GROUP BY YEAR(DATE)",
             ("YEAR", "RAIN_FREQ"), "line", "", "Number of rainy days", "Number of rainy days by year", ())
     }
+    predictors = {
+        q6: (datetime.date.today(), 7, 2, "line", "", "Temperature (F)", ""),
+        q7: (datetime.date.today(), 10, 1, "bar", "", "Number of days", "") 
+    }
+    
     try:
-        quest = responses[query]
-        print(quest[0], quest[6])
-        data = execute_query(quest[0], quest[6])
-        print("Query result: {}".format(data))
-        cols = quest[1]
-        ctype = quest[2]
-        x_title = quest[3]
-        y_title = quest[4]
-        c_title = quest[5]
-    except KeyError as e:
-        data = []
-        cols = set()
-        ctype = ""
-        x_title = ""
-        y_title = ""
-        c_title = ""
-        print("Invalid Question")
+        if query in responses.keys():
+            quest = responses[query]
+            print(quest[0], quest[6])
+            data = execute_query(quest[0], quest[6])
+            print("Query result: {}".format(data))
+            cols = quest[1]
+            ctype = quest[2]
+            x_title = quest[3]
+            y_title = quest[4]
+            c_title = quest[5]
+        elif query in predictors.keys():
+            quest = predictors[query]
+            data = predict(quest[0], quest[1])
+            cols = list(data.keys())
+            data[cols[0]] = list(map(lambda x: x.strftime("%m-%d"), data["Date"]))
+            data[cols[1]] = list(data[cols[1]])
+            #col_name = data.columns[0]
+            data.pop(cols[quest[2]])
+            cols.pop(quest[2])
+            print(data)
+            ctype = quest[3]
+            x_title = quest[4]
+            y_title = quest[5]
+            c_title = quest[6]
+            if query == q7:
+                data["Rainy days"] = sum(data["Rain"])
+                data["Non-rainy days"] = len(data["Rain"]) - sum(data["Rain"])
+                data["Date"] = [data["Date"][0]]
+                cols = list(data.keys())
+                data.pop(cols[1])
+                cols.pop(1)
+                print(data)
+        else:
+            print("Invalid Question")
+            data = []
+            cols = set()
+            ctype = ""
+            x_title = ""
+            y_title = ""
+            c_title = ""
+    except Exception as e:
+        print("error: {}".format(e))
     
     return data, cols, ctype, x_title, y_title, c_title
 
@@ -324,8 +356,8 @@ def predict(date, daysAhead):
     predictedRain = rainForest.predict(filteredDF)
     # Store predictions for each day in dataframe
     predictedData = {"Date": dateList, "Temp": predictedTemp, "Rain": predictedRain}
-    predictDF = pd.DataFrame(predictedData)
-    return predictDF
+    #predictDF = pd.DataFrame(predictedData)
+    return predictedData
 
 @app.route('/testing')
 def predictTest():
