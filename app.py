@@ -128,7 +128,26 @@ def getPredictions(uid):
         predictions = predict(datetime.date.today(), 0)
         temperature = predictions['Temp'][0]
         rain = predictions['Rain'][0]
-        return str(predictions['Temp'][0])
+        pred_str = ""
+        pred_str += "The predicted temperature for tomorrow is: " + str(temperature) + "\n"
+        if rain == 1:
+            pred_str += "It is also expected to rain tomorrow." "\n"
+        recString = ""
+        match temperature:
+            case temperature if temperature < minTemp:
+                recString = recString + "You should bring a coat"
+            case temperature if temperature > maxTemp:
+                recString = recString + "You should bring some water"
+        if rain == 1:
+            if recString == "":
+                recString = recString + "You should bring an umbrella"
+            else:
+                recString = recString + " and an umbrella"
+        else:
+            if recString == "":
+                recString = "No recommendations. Enjoy the weather!"   
+        pred_str = pred_str + recString
+        return str(predictions['Temp'][0], pred=pred_str)
 
 # Allow the user to sort and filter database items for analysis
 @app.route('/user/<uid>', methods=['GET', 'POST'])
