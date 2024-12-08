@@ -148,14 +148,6 @@ def getPredictions(uid):
                 recString = "No recommendations. Enjoy the weather!"   
         pred_str = pred_str + recString
         return str(predictions['Temp'][0], pred=pred_str)
-    
-@app.route('/user/<uid>')
-def main(uid):
-    if int(uid) == -1:
-        return "<h1>User info</h1> Incorrect username or password"
-    else:
-        settemp(uid)
-        return render_template('user.html')
 
 # Allow the user to sort and filter database items for analysis
 @app.route('/user/<uid>', methods=['GET', 'POST'])
@@ -163,7 +155,7 @@ def sortfilter(uid):
     # If the UID is invalid, the profile doesn't exist
     if int(uid) == -1:
         return "<h1>User info</h1> Incorrect username or password"
-    else:
+    elif request.method == "POST":
         settemp(uid)
         # When user attempts to upload, get data from database
         file = request.files["csv_file"]
@@ -214,7 +206,8 @@ def sortfilter(uid):
             data = data.sort_values(by=sort_column, ascending=(sort_order == 'asc'))
         # Return the dataframe as an HTML table, to display it to users
         return render_template('user.html', data=data.to_html())
-
+    settemp(uid)
+    return render_template('user.html')
 
 
 def get_data(query=None):
