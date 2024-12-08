@@ -14,6 +14,8 @@ DB_SERVER = 'ccfinalprojectserver.database.windows.net'
 DB_USER = 'finalprojectlogin'
 DB_PASSWORD = 'weatherapp1!'
 DB_NAME = 'ccfinalprojectdatabase'
+MIN_TEMP = 50
+MAX_TEMP = 78
 
 project_root = os.path.dirname(__file__)
 template_path = os.path.join(project_root, './templates')
@@ -37,8 +39,6 @@ def get_db():
         print("New connection")
         conn = g.conn = connect_to_database()
         db = g.db = conn.cursor() 
-        #print(conn, db)
-        #print(conn._conn.connected)
     return db, conn
 
 # Run queries
@@ -73,6 +73,21 @@ def getuid(username, password):
         return -1
     return rows[0][0]
 
+def gettemp(uid):
+    mint = getattr(g, 'mint', None)
+    maxt = getattr(g, 'maxt', None)
+    if mint is None or maxt is None:
+        rows = execute_query("""SELECT mint, maxt FROM dbo.users WHERE id = %s""", (uid,))
+        if len(rows) == 0:
+            mint = g.mint = 50
+            maxt = g.maxt = 78
+        else:
+            mint = g.mint = rows[0][0]
+            maxt = g.maxt = rows[0][1]
+    print("Temps: {}, {}".format(mint, maxt))
+    return mint, maxt
+
+    
 # First webpage
 @app.route('/')
 def index():
@@ -105,89 +120,113 @@ def login():
     userid = getuid(username, password)
     return redirect("/user/{}".format(userid))
 
-@app.route('/user/<uid>', methods=['GET', 'POST'])
+@app.route('/user/<uid>')
 def main(uid):
     if uid == -1:
         return "<h1>User info</h1> Incorrect username or password"
     else:
-        if request.method == 'POST':
-            file = request.files['csv_file']
-            cursor, connection = get_db()
-            weatherResults = execute_query("SELECT * FROM dbo.HS_WEATHER;")
-            columnNames = [column[0] for column in cursor.description]
-            data = pd.DataFrame.from_records(weatherResults, columns=columnNames)
-
-            sort_column = request.form.get('sort_column')
-            sort_order = request.form.get('sort_order', 'asc')
-            if file.filename == '':
-                if sort_column:
-                    data = data.sort_values(by=sort_column, ascending=(sort_order == 'asc'))
-                return render_template('user.html', data=data.to_html())
-
-            try:
-                uploadedData = pd.read_csv(file)
-                uploadedTuples = [tuple(x) for x in uploadedData.to_numpy()]
-                sql_insert = "INSERT INTO dbo.HS_WEATHER (STATION, DATE, LATITUDE, LONGITUDE, " +\
-                    "ELEVATION, NAME, TEMP, TEMP_ATTRIBUTES, DEWP, DEWP_ATTRIBUTES, SLP, " +\
-                    "SLP_ATTRIBUTES, STP, STP_ATTRIBUTES, VISIB, VISIB_ATTRIBUTES, WDSP, " +\
-                    "WDSP_ATTRIBUTES, MXSPD, GUST, MAX, MAX_ATTRIBUTES, MIN, " +\
-                    "MIN_ATTRIBUTES, PRCP, PRCP_ATTRIBUTES, SNDP, FRSHTT) VALUES " +\
-                    "(%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)"
-                cursor.executemany(sql_insert, uploadedTuples)
-                connection.commit()
-                # Allow sorting
-                sort_column = request.form.get('sort_column')
-                sort_order = request.form.get('sort_order', 'asc')
-
-                data = execute_query("SELECT * FROM dbo.HS_WEATHER;")
-                dataframe = pd.DataFrame.from_records(data, columns=columnNames)
-                if sort_column:
-                    dataframe = dataframe.sort_values(by=sort_column, ascending=(sort_order == 'asc'))
-                # Process the DataFrame here (e.g., display it, save it to a database)
-                return render_template('user.html', data=dataframe.to_html())
-            except Exception as e:
-                return f'Error processing file: {e}'
         return render_template('user.html')
 
+@app.route('/user/<uid>', methods=['POST'])
+def uploadcsv(uid):
+    file = request.files['csv_file']
+    cursor, connection = get_db()
+    weatherResults = execute_query("SELECT * FROM dbo.HS_WEATHER;")
+    columnNames = [column[0] for column in cursor.description]
+    data = pd.DataFrame.from_records(weatherResults, columns=columnNames)
 
-def get_data(query=None, args=()):
+    sort_column = request.form.get('sort_column')
+    sort_order = request.form.get('sort_order', 'asc')
+    if file.filename == '':
+        if sort_column:
+            data = data.sort_values(by=sort_column, ascending=(sort_order == 'asc'))
+        return render_template('user.html', data=data.to_html())
+
+    try:
+        uploadedData = pd.read_csv(file)
+        uploadedTuples = [tuple(x) for x in uploadedData.to_numpy()]
+        sql_insert = "INSERT INTO dbo.HS_WEATHER (STATION, DATE, LATITUDE, LONGITUDE, " +\
+            "ELEVATION, NAME, TEMP, TEMP_ATTRIBUTES, DEWP, DEWP_ATTRIBUTES, SLP, " +\
+            "SLP_ATTRIBUTES, STP, STP_ATTRIBUTES, VISIB, VISIB_ATTRIBUTES, WDSP, " +\
+            "WDSP_ATTRIBUTES, MXSPD, GUST, MAX, MAX_ATTRIBUTES, MIN, " +\
+            "MIN_ATTRIBUTES, PRCP, PRCP_ATTRIBUTES, SNDP, FRSHTT) VALUES " +\
+            "(%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)"
+        cursor.executemany(sql_insert, uploadedTuples)
+        connection.commit()
+        # Allow sorting
+        sort_column = request.form.get('sort_column')
+        sort_order = request.form.get('sort_order', 'asc')
+
+        data = execute_query("SELECT * FROM dbo.HS_WEATHER;")
+        dataframe = pd.DataFrame.from_records(data, columns=columnNames)
+        if sort_column:
+            dataframe = dataframe.sort_values(by=sort_column, ascending=(sort_order == 'asc'))
+        # Process the DataFrame here (e.g., display it, save it to a database)
+        return render_template('user.html', data=dataframe.to_html())
+    except Exception as e:
+        return f'Error processing file: {e}'
+
+
+def get_data(query=None):
     """Fetch data from the database and return as a Pandas DataFrame."""
-    q1 = "what were the highest and lowest temperatures for this month in the previous years"
-    q2 = ""
+    q1 = "highest_lowest_temperatures"
+    q2 = "average_wind_speed_hot_cold_days"
+    q3 = "coldest_day_this_month"
+    
+    mint, maxt = gettemp(mint, maxt)
     
     responses = {
-        q1 : "SELECT MAX(TEMP) AS MAX_TEMP, " +\
-        "MIN(TEMP) AS MIN_TEMP FROM " +\
-        "(SELECT TEMP, DATE FROM dbo.HS_WEATHER WHERE MONTH(DATE) = MONTH(GETDATE()) " +\
-        "AND YEAR(DATE) = YEAR(GETDATE()) - 1) LM;"
+        q1 : ("SELECT YEAR(DATE) AS YEAR, MAX(TEMP) AS MAX_TEMP, MIN(TEMP) AS MIN_TEMP FROM " +\
+        "(SELECT TEMP, DATE FROM dbo.HS_WEATHER WHERE MONTH(DATE) = MONTH(GETDATE())) LM " +\
+        "GROUP BY YEAR(DATE);", ("YEAR", "MAX_TEMP", "MIN_TEMP"), "bar", "", "Temperature (F)", 
+        "Previous Years Temperature chart of current month", ()),
+        q2:  ("SELECT A.MONTH, A.HOT_DAYS, B.COLD_DAYS FROM" +\
+            "(SELECT AVG(WDSP) AS HOT_DAYS, MONTH(DATE) AS MONTH FROM dbo.HS_WEATHER" +\
+            "WHERE TEMP > %s GROUP BY MONTH(DATE)) A JOIN (SELECT AVG(WDSP) AS COLD_DAYS, " +\
+            "MONTH(DATE) AS MONTH FROM dbo.HS_WEATHER WHERE TEMP < %s GROUP BY MONTH(DATE)) B ON A.MONTH = B.MONTH;",
+            ("MONTH", "HOT_DAYS", "COLD_DAYS"), "bar", "", "Wind Speed (knots)",
+            "Average wind speed for hot and cold days each month", (mint, maxt)),
+        q3: ("SELECT A.YEAR, B.DAY FROM (SELECT MIN(TEMP) AS TEMP, YEAR(DATE) AS YEAR FROM dbo.HS_WEATHER " +\
+            "WHERE MONTH(DATE) = MONTH(GETDATE()) GROUP BY YEAR(DATE)) A JOIN (SELECT TEMP, " +\
+            "DAY(DATE) AS DAY, YEAR(DATE) AS YEAR FROM dbo.HS_WEATHER) B ON A.YEAR = B.YEAR " +\
+            "AND A.TEMP = B.TEMP;", ("YEAR", "DAY"), "bar", "", "",
+            "Coldest day this month across all years", ())
+        
     }
-    cols = {
-        q1: ("MAX_TEMP", "MIN_TEMP")
-    }
-    
     try:
-        sql_query = responses[query]
-        sql_cols = cols[query]
+        quest = responses[query]
+        args = quest[6]
+        data = execute_query(quest[0], args)
+        cols = quest[1]
+        ctype = quest[2]
+        x_title = quest[3]
+        y_title = quest[4]
+        c_title = quest[5]
     except KeyError as e:
-        sql_query = "Invalid Question"
-        sql_cols = set()
-    print(query, sql_query, sql_cols)
+        data = []
+        cols = set()
+        ctype = ""
+        x_title = ""
+        y_title = ""
+        c_title = ""
     
-    return execute_query(sql_query, args), sql_cols
+    return data, cols, ctype, x_title, y_title, c_title
 
-def get_chart(data, cols, ctype):
+def get_chart(data, cols, ctype = "bar", x_title="", y_title="", c_title="Data Chart"):
     """Generate a chart using Matplotlib."""
     df = pd.DataFrame.from_records(data, columns=cols)
-    plt.figure(figsize=(10, 6))
+    emp = lambda x, y: x if x != "" else y
+    print(df)
     
     match ctype:
         case "bar":
-            plt.bar(df[cols[0]], df[cols[1]], color='skyblue')
-            plt.title('Data Chart', fontsize=16)
-            plt.xlabel(cols[0], fontsize=14)
-            plt.ylabel(cols[1], fontsize=14)
-            plt.xticks(rotation=45, ha='right')
-            plt.tight_layout()
+            df.plot(x=cols[0], 
+                    kind=ctype, 
+                    stacked=False)
+            plt.xticks(rotation=0, ha='right')
+            plt.xlabel(emp(x_title, cols[0]))
+            plt.ylabel(y_title)
+            plt.title(c_title)
 
     img = io.BytesIO()
     plt.savefig(img, format='png')
@@ -202,8 +241,8 @@ def query():
     user_query = request.json.get('query').lower()
     print("query: {}".format(user_query))
     try:
-        data, cols = get_data(user_query)
-        chart = get_chart(data, cols,'bar')
+        data, cols, ctype, x_title, y_title, c_title = get_data(user_query)
+        chart = get_chart(data, cols, ctype, x_title, y_title, c_title)
         return send_file(chart, mimetype='image/png')
     except Exception as e:
         response = {"error": str(e)}
