@@ -14,8 +14,8 @@ DB_SERVER = 'ccfinalprojectserver.database.windows.net'
 DB_USER = 'finalprojectlogin'
 DB_PASSWORD = 'weatherapp1!'
 DB_NAME = 'ccfinalprojectdatabase'
-MIN_TEMP = 50
-MAX_TEMP = 78
+MINT = 50
+MAXT = 78
 
 project_root = os.path.dirname(__file__)
 template_path = os.path.join(project_root, './templates')
@@ -73,19 +73,16 @@ def getuid(username, password):
         return -1
     return rows[0][0]
 
-def gettemp(uid):
-    mint = getattr(g, 'mint', None)
-    maxt = getattr(g, 'maxt', None)
-    if mint is None or maxt is None:
-        rows = execute_query("""SELECT mint, maxt FROM dbo.users WHERE id = %s""", (uid,))
-        if len(rows) == 0:
-            mint = g.mint = 50
-            maxt = g.maxt = 78
-        else:
-            mint = g.mint = rows[0][0]
-            maxt = g.maxt = rows[0][1]
-    print("Temps: {}, {}".format(mint, maxt))
-    return mint, maxt
+def settemp(uid):
+    rows = execute_query("""SELECT mint, maxt FROM dbo.users WHERE id = %s""", (uid,))
+    if len(rows) == 0:
+        app.config['MINT'] = 50
+        app.config['MAXT'] = 78
+    else:
+        app.config['MINT'] = rows[0][0]
+        app.config['MAXT'] = rows[0][1]
+    print("temps: {}, {}".format(app.config['MINT'], app.config['MAXT']))
+    return app.config['MINT'], app.config['MAXT']
 
     
 # First webpage
@@ -125,6 +122,7 @@ def main(uid):
     if uid == -1:
         return "<h1>User info</h1> Incorrect username or password"
     else:
+        settemp(uid)
         return render_template('user.html')
 
 @app.route('/user/<uid>', methods=['POST'])
@@ -172,30 +170,37 @@ def get_data(query=None):
     q1 = "highest_lowest_temperatures"
     q2 = "average_wind_speed_hot_cold_days"
     q3 = "coldest_day_this_month"
+    q4 = "dew_by_day"
+    q5 = "rain_by_month"
     
-    mint, maxt = gettemp(mint, maxt)
-    
+    mint = app.config['MINT']
+    maxt = app.config['MAXT']
+    print("Query Temps: {}, {}".format(mint, maxt))   
     responses = {
         q1 : ("SELECT YEAR(DATE) AS YEAR, MAX(TEMP) AS MAX_TEMP, MIN(TEMP) AS MIN_TEMP FROM " +\
         "(SELECT TEMP, DATE FROM dbo.HS_WEATHER WHERE MONTH(DATE) = MONTH(GETDATE())) LM " +\
         "GROUP BY YEAR(DATE);", ("YEAR", "MAX_TEMP", "MIN_TEMP"), "bar", "", "Temperature (F)", 
         "Previous Years Temperature chart of current month", ()),
-        q2:  ("SELECT A.MONTH, A.HOT_DAYS, B.COLD_DAYS FROM" +\
-            "(SELECT AVG(WDSP) AS HOT_DAYS, MONTH(DATE) AS MONTH FROM dbo.HS_WEATHER" +\
-            "WHERE TEMP > %s GROUP BY MONTH(DATE)) A JOIN (SELECT AVG(WDSP) AS COLD_DAYS, " +\
-            "MONTH(DATE) AS MONTH FROM dbo.HS_WEATHER WHERE TEMP < %s GROUP BY MONTH(DATE)) B ON A.MONTH = B.MONTH;",
+        q2:  ("""SELECT A.MONTH, A.HOT_DAYS, B.COLD_DAYS FROM
+(SELECT AVG(WDSP) AS HOT_DAYS, MONTH(DATE) AS MONTH FROM dbo.HS_WEATHER WHERE TEMP > %s GROUP BY MONTH(DATE)) A JOIN 
+(SELECT AVG(WDSP) AS COLD_DAYS, MONTH(DATE) AS MONTH FROM dbo.HS_WEATHER WHERE TEMP < %s GROUP BY MONTH(DATE)) B ON A.MONTH = B.MONTH ORDER BY A.MONTH;""",
             ("MONTH", "HOT_DAYS", "COLD_DAYS"), "bar", "", "Wind Speed (knots)",
             "Average wind speed for hot and cold days each month", (mint, maxt)),
         q3: ("SELECT A.YEAR, B.DAY FROM (SELECT MIN(TEMP) AS TEMP, YEAR(DATE) AS YEAR FROM dbo.HS_WEATHER " +\
             "WHERE MONTH(DATE) = MONTH(GETDATE()) GROUP BY YEAR(DATE)) A JOIN (SELECT TEMP, " +\
             "DAY(DATE) AS DAY, YEAR(DATE) AS YEAR FROM dbo.HS_WEATHER) B ON A.YEAR = B.YEAR " +\
-            "AND A.TEMP = B.TEMP;", ("YEAR", "DAY"), "bar", "", "",
-            "Coldest day this month across all years", ())
-        
+            "AND A.TEMP = B.TEMP;", ("YEAR", "DAY"), "bar", "", "Day of month",
+            "Coldest day this month across all years", ()),
+        q4: ("SELECT DAY(DATE) AS DAY, AVG(DEWP) AS DEWP  FROM dbo.HS_WEATHER GROUP BY DAY(DATE) ORDER BY DAY",
+            ("DAY", "DEWP"), "line", "", "Dew point", "Average dew point by day", ()),
+        q5: ("SELECT YEAR(DATE) AS YEAR, COUNT(*) AS RAIN_FREQ FROM dbo.HS_WEATHER WHERE FLOOR(FRSHTT / 10000) % 10 = 1 GROUP BY YEAR(DATE)",
+            ("YEAR", "RAIN_FREQ"),"line", "", "Number of rainy days", "Number of rainy days by year", ())
     }
     try:
+        
         quest = responses[query]
         args = quest[6]
+        print(quest[0], args)
         data = execute_query(quest[0], args)
         cols = quest[1]
         ctype = quest[2]
@@ -220,14 +225,14 @@ def get_chart(data, cols, ctype = "bar", x_title="", y_title="", c_title="Data C
     
     match ctype:
         case "bar":
-            df.plot(x=cols[0], 
-                    kind=ctype, 
-                    stacked=False)
-            plt.xticks(rotation=0, ha='right')
-            plt.xlabel(emp(x_title, cols[0]))
-            plt.ylabel(y_title)
-            plt.title(c_title)
-
+            df.plot(x=cols[0], kind=ctype, stacked=False)
+        case "line":
+            df.plot(x=cols[0], y=cols[1], ax=plt.gca())
+            
+    plt.xticks(rotation=0, ha='right')
+    plt.xlabel(emp(x_title, cols[0]))
+    plt.ylabel(y_title)
+    plt.title(c_title)
     img = io.BytesIO()
     plt.savefig(img, format='png')
     img.seek(0)
