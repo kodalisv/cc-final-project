@@ -14,6 +14,8 @@ DB_SERVER = 'ccfinalprojectserver.database.windows.net'
 DB_USER = 'finalprojectlogin'
 DB_PASSWORD = 'weatherapp1!'
 DB_NAME = 'ccfinalprojectdatabase'
+MIN_TEMP = 50
+MAX_TEMP = 78
 
 project_root = os.path.dirname(__file__)
 template_path = os.path.join(project_root, './templates')
@@ -71,6 +73,16 @@ def getuid(username, password):
         return -1
     return rows[0][0]
 
+def settemp(uid):
+    rows = execute_query("""SELECT mint, maxt FROM dbo.users WHERE id = %s""",
+                  (uid,))
+    if len(rows) == 0:
+        mint = g.mint = 50
+        maxt = g.db = 78
+    else:
+        mint = g.mint = rows[0][0]
+        maxt = g.db = rows[0][1]
+
 # First webpage
 @app.route('/')
 def index():
@@ -108,6 +120,7 @@ def main(uid):
     if uid == -1:
         return "<h1>User info</h1> Incorrect username or password"
     else:
+        settemp(uid)
         if request.method == 'POST':
             file = request.files['csv_file']
             cursor, connection = get_db()
@@ -148,32 +161,36 @@ def main(uid):
         return render_template('user.html')
 
 
-def get_data(query=None, args=()):
+def get_data(query=None):
     """Fetch data from the database and return as a Pandas DataFrame."""
     q1 = "highest_lowest_temperatures"
     q2 = "average_wind_speed_hot_cold_days"
     q3 = "coldest_day_this_month"
     
+    mint = getattr(g, 'mint', 0)
+    maxt = getattr(g, 'maxt', 0)
+    
     responses = {
         q1 : ("SELECT YEAR(DATE) AS YEAR, MAX(TEMP) AS MAX_TEMP, MIN(TEMP) AS MIN_TEMP FROM " +\
         "(SELECT TEMP, DATE FROM dbo.HS_WEATHER WHERE MONTH(DATE) = MONTH(GETDATE())) LM " +\
         "GROUP BY YEAR(DATE);", ("YEAR", "MAX_TEMP", "MIN_TEMP"), "bar", "", "Temperature (F)", 
-        "Previous Years Temperature chart of current month"),
+        "Previous Years Temperature chart of current month", set()),
         q2:  ("SELECT A.MONTH, A.HOT_DAYS, B.COLD_DAYS FROM" +\
             "(SELECT AVG(WDSP) AS HOT_DAYS, MONTH(DATE) AS MONTH FROM dbo.HS_WEATHER" +\
             "WHERE TEMP > %s GROUP BY MONTH(DATE)) A JOIN (SELECT AVG(WDSP) AS COLD_DAYS, " +\
             "MONTH(DATE) AS MONTH FROM dbo.HS_WEATHER WHERE TEMP < %s GROUP BY MONTH(DATE)) B ON A.MONTH = B.MONTH;",
             ("MONTH", "HOT_DAYS", "COLD_DAYS"), "bar", "", "Wind Speed (knots)",
-            "Average wind speed for hot and cold days each month"),
+            "Average wind speed for hot and cold days each month", (mint, maxt)),
         q3: ("SELECT A.YEAR, B.DAY FROM (SELECT MIN(TEMP) AS TEMP, YEAR(DATE) AS YEAR FROM dbo.HS_WEATHER " +\
             "WHERE MONTH(DATE) = MONTH(GETDATE()) GROUP BY YEAR(DATE)) A JOIN (SELECT TEMP, " +\
             "DAY(DATE) AS DAY, YEAR(DATE) AS YEAR FROM dbo.HS_WEATHER) B ON A.YEAR = B.YEAR " +\
             "AND A.TEMP = B.TEMP;", ("YEAR", "DAY"), "bar", "", "",
-            "Coldest day this month across all years")
+            "Coldest day this month across all years", set())
         
     }
     try:
         quest = responses[query]
+        args = quest[6]
         data = execute_query(quest[0], args)
         cols = quest[1]
         ctype = quest[2]
