@@ -169,39 +169,37 @@ def get_data(query=None):
     """Fetch data from the database and return as a Pandas DataFrame."""
     q1 = "highest_lowest_temperatures"
     q2 = "average_wind_speed_hot_cold_days"
-    q3 = "coldest_day_this_month"
+    q3 = "lowest_snow_temp_per_year"
     q4 = "dew_by_day"
-    q5 = "rain_by_month"
+    q5 = "rain_by_year"
     
     mint = app.config['MINT']
     maxt = app.config['MAXT']
     print("Query Temps: {}, {}".format(mint, maxt))   
     responses = {
-        q1 : ("SELECT YEAR(DATE) AS YEAR, MAX(TEMP) AS MAX_TEMP, MIN(TEMP) AS MIN_TEMP FROM " +\
-        "(SELECT TEMP, DATE FROM dbo.HS_WEATHER WHERE MONTH(DATE) = MONTH(GETDATE())) LM " +\
-        "GROUP BY YEAR(DATE);", ("YEAR", "MAX_TEMP", "MIN_TEMP"), "bar", "", "Temperature (F)", 
-        "Previous Years Temperature chart of current month", ()),
+        q1 : ("""SELECT MA.YEAR, MAX AS MAX_TEMP, MIN AS MIN_TEMP FROM 
+            (SELECT MAX(MAX) AS MAX, YEAR(DATE) AS YEAR FROM dbo.HS_WEATHER WHERE MONTH(DATE) = MONTH(GETDATE()) AND MAX < 9999.9 GROUP BY YEAR(DATE)) MA JOIN
+            (SELECT MIN(MIN) AS MIN, YEAR(DATE) AS YEAR FROM dbo.HS_WEATHER WHERE MONTH(DATE) = MONTH(GETDATE()) AND MIN < 9999.9 GROUP BY YEAR(DATE)) MI ON MA.YEAR = MI.YEAR;""",
+            ("YEAR", "MAX_TEMP", "MIN_TEMP"), "bar", "", "Temperature (F)", 
+            "Previous Years Temperature chart of current month", ()),
         q2:  ("""SELECT A.MONTH, A.HOT_DAYS, B.COLD_DAYS FROM
-(SELECT AVG(WDSP) AS HOT_DAYS, MONTH(DATE) AS MONTH FROM dbo.HS_WEATHER WHERE TEMP > %s GROUP BY MONTH(DATE)) A JOIN 
-(SELECT AVG(WDSP) AS COLD_DAYS, MONTH(DATE) AS MONTH FROM dbo.HS_WEATHER WHERE TEMP < %s GROUP BY MONTH(DATE)) B ON A.MONTH = B.MONTH ORDER BY A.MONTH;""",
+            (SELECT AVG(WDSP) AS HOT_DAYS, MONTH(DATE) AS MONTH FROM dbo.HS_WEATHER WHERE TEMP > %s GROUP BY MONTH(DATE)) A JOIN 
+            (SELECT AVG(WDSP) AS COLD_DAYS, MONTH(DATE) AS MONTH FROM dbo.HS_WEATHER WHERE TEMP < %s GROUP BY MONTH(DATE)) B ON A.MONTH = B.MONTH ORDER BY A.MONTH;""",
             ("MONTH", "HOT_DAYS", "COLD_DAYS"), "bar", "", "Wind Speed (knots)",
             "Average wind speed for hot and cold days each month", (mint, maxt)),
-        q3: ("SELECT A.YEAR, B.DAY FROM (SELECT MIN(TEMP) AS TEMP, YEAR(DATE) AS YEAR FROM dbo.HS_WEATHER " +\
-            "WHERE MONTH(DATE) = MONTH(GETDATE()) GROUP BY YEAR(DATE)) A JOIN (SELECT TEMP, " +\
-            "DAY(DATE) AS DAY, YEAR(DATE) AS YEAR FROM dbo.HS_WEATHER) B ON A.YEAR = B.YEAR " +\
-            "AND A.TEMP = B.TEMP;", ("YEAR", "DAY"), "bar", "", "Day of month",
-            "Coldest day this month across all years", ()),
+        q3: ("SELECT YEAR(DATE) AS YEAR, MIN(MIN) AS MIN_TEMP FROM dbo.HS_WEATHER " +\
+            "WHERE FLOOR(FRSHTT / 1000) % 10 = 1 GROUP BY YEAR(DATE) ORDER BY YEAR(DATE);", 
+            ("DATE", "TEMP"), "line", "", "Temperature (F)", "Lowest temperature for snowy days by year", ()),
         q4: ("SELECT DAY(DATE) AS DAY, AVG(DEWP) AS DEWP  FROM dbo.HS_WEATHER GROUP BY DAY(DATE) ORDER BY DAY",
             ("DAY", "DEWP"), "line", "", "Dew point", "Average dew point by day", ()),
         q5: ("SELECT YEAR(DATE) AS YEAR, COUNT(*) AS RAIN_FREQ FROM dbo.HS_WEATHER WHERE FLOOR(FRSHTT / 10000) % 10 = 1 GROUP BY YEAR(DATE)",
-            ("YEAR", "RAIN_FREQ"),"line", "", "Number of rainy days", "Number of rainy days by year", ())
+            ("YEAR", "RAIN_FREQ"), "line", "", "Number of rainy days", "Number of rainy days by year", ())
     }
     try:
-        
         quest = responses[query]
-        args = quest[6]
-        print(quest[0], args)
-        data = execute_query(quest[0], args)
+        print(quest[0], quest[6])
+        data = execute_query(quest[0], quest[6])
+        print("Query result: {}".format(data))
         cols = quest[1]
         ctype = quest[2]
         x_title = quest[3]
@@ -214,6 +212,7 @@ def get_data(query=None):
         x_title = ""
         y_title = ""
         c_title = ""
+        print("Invalid Question")
     
     return data, cols, ctype, x_title, y_title, c_title
 
