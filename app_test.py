@@ -123,18 +123,42 @@ def main(uid):
     else:
         settemp(uid)
         return render_template('user.html')
-    
+
 
 @app.route('/user/<uid>', methods=['POST'])
 def uploadcsv(uid):
-    # Change UID to int (it's a string by default)
-    uid = int(uid)
     # If the UID is invalid, the profile doesn't exist
-    if uid == -1:
-        abort(404)
+    if int(uid) == -1:
+        return "<h1>User info</h1> Incorrect username or password"
     else:
         # When user attempts to upload, get data from database
         file = request.files['csv_file']
+        # If no file name is given, just sort and return what's in the database
+        # Otherwise, add data from the uploaded CSV to the database, then sort and return data
+        try:
+            if file.filename != '':
+                uploadedData = pd.read_csv(file)
+                uploadedTuples = [tuple(x) for x in uploadedData.to_numpy()]
+                sql_insert = "INSERT INTO dbo.HS_WEATHER (STATION, DATE, LATITUDE, LONGITUDE, " +\
+                    "ELEVATION, NAME, TEMP, TEMP_ATTRIBUTES, DEWP, DEWP_ATTRIBUTES, SLP, " +\
+                    "SLP_ATTRIBUTES, STP, STP_ATTRIBUTES, VISIB, VISIB_ATTRIBUTES, WDSP, " +\
+                    "WDSP_ATTRIBUTES, MXSPD, GUST, MAX, MAX_ATTRIBUTES, MIN, " +\
+                    "MIN_ATTRIBUTES, PRCP, PRCP_ATTRIBUTES, SNDP, FRSHTT) VALUES " +\
+                    "(%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)"
+                insert_many(sql_insert, uploadedTuples)
+            # Return the dataframe as an HTML table, to display it to users
+            return redirect("/user/{}".format(uid))
+        except Exception as e:
+            return f'Error processing file: {e}'
+
+
+@app.route('/user/<uid>', methods=['GET'])
+def sortfilter(uid):
+    # If the UID is invalid, the profile doesn't exist
+    if int(uid) == -1:
+        return "<h1>User info</h1> Incorrect username or password"
+    else:
+        # When user attempts to upload, get data from database
         cursor, connection = get_db()
         weatherResults = execute_query("SELECT * FROM dbo.HS_WEATHER;")
         columnNames = [column[0] for column in cursor.description]
@@ -154,38 +178,26 @@ def uploadcsv(uid):
         sort_order = request.form.get('sort_order', 'asc')
         # If no file name is given, just sort and return what's in the database
         # Otherwise, add data from the uploaded CSV to the database, then sort and return data
-        try:
-            if file.filename != '':
-                uploadedData = pd.read_csv(file)
-                uploadedTuples = [tuple(x) for x in uploadedData.to_numpy()]
-                sql_insert = "INSERT INTO dbo.HS_WEATHER (STATION, DATE, LATITUDE, LONGITUDE, " +\
-                    "ELEVATION, NAME, TEMP, TEMP_ATTRIBUTES, DEWP, DEWP_ATTRIBUTES, SLP, " +\
-                    "SLP_ATTRIBUTES, STP, STP_ATTRIBUTES, VISIB, VISIB_ATTRIBUTES, WDSP, " +\
-                    "WDSP_ATTRIBUTES, MXSPD, GUST, MAX, MAX_ATTRIBUTES, MIN, " +\
-                    "MIN_ATTRIBUTES, PRCP, PRCP_ATTRIBUTES, SNDP, FRSHTT) VALUES " +\
-                    "(%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)"
-                cursor.executemany(sql_insert, uploadedTuples)
-                connection.commit()
-            # Get database data, then sort it
-            data['DATE'] = pd.to_datetime(data['DATE'])
-            data['YEAR'] = data['DATE'].dt.year
-            data['MONTH'] = data['DATE'].dt.month
-            data['DAY'] = data['DATE'].dt.day
 
-            if year_filter != '':
-                data = data[data['YEAR'] == year_filter]
-            if month_filter != '':
-                data = data[data['MONTH'] == month_filter]
-            if day_filter != '':
-                data = data[data['DAY'] == day_filter]
-            data.drop(labels=['YEAR', 'MONTH', 'DAY'], axis=1, inplace=True)
+        # Get database data, then sort it
+        data['DATE'] = pd.to_datetime(data['DATE'])
+        data['YEAR'] = data['DATE'].dt.year
+        data['MONTH'] = data['DATE'].dt.month
+        data['DAY'] = data['DATE'].dt.day
 
-            if sort_column:
-                data = data.sort_values(by=sort_column, ascending=(sort_order == 'asc'))
-            # Return the dataframe as an HTML table, to display it to users
-            return render_template('user.html', data=data.to_html())
-        except Exception as e:
-            return f'Error processing file: {e}'
+        if year_filter != '':
+            data = data[data['YEAR'] == year_filter]
+        if month_filter != '':
+            data = data[data['MONTH'] == month_filter]
+        if day_filter != '':
+            data = data[data['DAY'] == day_filter]
+        data.drop(labels=['YEAR', 'MONTH', 'DAY'], axis=1, inplace=True)
+
+        if sort_column:
+            data = data.sort_values(by=sort_column, ascending=(sort_order == 'asc'))
+        # Return the dataframe as an HTML table, to display it to users
+        return render_template('user.html', data=data.to_html())
+
 
 
 def get_data(query=None):
