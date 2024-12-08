@@ -75,6 +75,7 @@
         <option value="rain_by_year">What is the total number of rainy days by year?</option>
         <option value="predicted_temperature_next_7_days">What is the predicted temperature in the next 7 days?</option>
         <option value="rainy_days_next_10_days">How many rainy days will there be in the next 10 days?</option>
+        <option value="rainy_days_next_10_days1">How many rainy days will there be in the next 10 days?</option>
     </select>
     <button type="submit">Submit</button>
 </form>
@@ -109,44 +110,143 @@
 
 <h2>Upload CSV File</h2>
 <h3>Please upload only CSV files from the NCEI database! Otherwise, an error will occur.</h3>
-<h3>To sort on the data currently in the database, upload no file and click 'Sort'</h3>
+<h3>To sort on the data currently in the database, upload no file and click 'Upload'</h3>
 <form method="POST" enctype="multipart/form-data">
-    <input type="file" name="csv_file">
-    <br>
-    <label>Filter Date:</label><br>
-    <label for="year">Year:</label>
-    <input type="number" id="year" name="year"><br>
-    <label for="month">Month:</label>
-    <input type="number" id="month" name="month"><br>
-    <label for="day">Day:</label>
-    <input type="number" id="day" name="day"><br>
-    <label for="sort_column">Sort by:</label>
-    <select name="sort_column" multiple>
-        <option value="TEMP">Temperature</option>
-        <option value="PRCP">Precipitation</option>
-        <option value="DATE">Date</option>
-        <option value="WDSP">Wind Speed</option>
-        <option value="MIN">Minimum Temperature</option>
-        <option value="MAX">Maximum Temperature</option>
-        <option value="DEWP">Dew Point</option>
-        <option value="FRSHTT">Extreme Weather (FRSHTT)</option>
-    </select>
-    <br>
-    <label for="sort_order">Order:</label>
-    <select name="sort_order">
-        <option value="asc">Ascending</option>
-        <option value="desc">Descending</option>
-    </select>
-    <br><br>
-    <button type="submit">Sort & Filter</button>
+  <input type="file" name="csv_file"><br>
+  <button type="submit">Upload</button>
 </form>
 
-<div class="response">
-    {% if data %}
-        <h3>Sorted Data:</h3>
-        {{ data | safe }}
-    {% endif %}
-</div>
 
+<h2>Sort and Filter Data</h2>
+<h3>Choose the correct filters</h3>
+<h3>To sort on the data currently in the database click 'Sort & Filter'</h3>
+<h3>Sorting Options</h3>
+<div class="sort-options">
+    <div class="criteria-item">
+        <select class="field">
+            <option value="TEMP">Temperature</option>
+            <option value="PRCP">Precipitation</option>
+            <option value="DATE">Date</option>
+            <option value="WDSP">Wind Speed</option>
+            <option value="MIN">Minimum Temperature</option>
+            <option value="MAX">Maximum Temperature</option>
+            <option value="DEWP">Dew Point</option>
+            <option value="FRSHTT">Extreme Weather (FRSHTT)</option>
+        </select>
+        <label>
+            <input type="radio" name="direction-1" value="asc" checked> Ascending
+        </label>
+        <label>
+            <input type="radio" name="direction-1" value="desc"> Descending
+        </label>
+        <button class="remove-sort">Remove</button>
+    </div>
+</div>
+<button class="add-sort">Add Sort</button>
+</div>
+<div>
+<h3>Filter Options</h3>
+<div class="filters">
+    <div class="filter-item">
+        <select class="field">
+            <option value="TEMP">Temperature</option>
+            <option value="PRCP">Precipitation</option>
+            <option value="DATE">Date</option>
+            <option value="WDSP">Wind Speed</option>
+            <option value="MIN">Minimum Temperature</option>
+            <option value="MAX">Maximum Temperature</option>
+            <option value="DEWP">Dew Point</option>
+            <option value="FRSHTT">Extreme Weather (FRSHTT)</option>
+        </select>
+        <select class="operation">
+            <option value="=">=</option>
+            <option value=">">></option>
+            <option value="<"><</option>
+            <option value="contains">Contains</option>
+        </select>
+        <input type="text" class="value" placeholder="Value">
+        <button class="remove-filter">Remove</button>
+    </div>
+</div>
+<button class="add-filter">Add Filter</button>
+</div>
+<button class="apply">Apply Sort and Filter</button>
+<div class="results"></div>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    // Apply sorting and filtering
+    document.querySelector('.apply').addEventListener('click', () => {
+        const sortCriteria = [];
+        document.querySelectorAll('.criteria-item').forEach((item, index) => {
+            const field = item.querySelector('.field').value;
+            const direction = item.querySelector(`input[name="direction-${index + 1}"]:checked`).value;
+            sortCriteria.push({ field, direction });
+        });
+
+        const filters = [];
+        document.querySelectorAll('.filter-item').forEach(item => {
+            const field = item.querySelector('.field').value;
+            const operation = item.querySelector('.operation').value;
+            const value = item.querySelector('.value').value;
+            filters.push({ field, operation, value });
+        });
+
+        fetch('/filter_sort', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ sort_criteria: sortCriteria, filters: filters }),
+        })
+        .then(response => response.json())
+        .then(data => {
+            const resultsContainer = document.querySelector('.results');
+            resultsContainer.innerHTML = '<h4>Filtered and Sorted Results</h4>';
+            data.forEach(row => {
+                resultsContainer.innerHTML += `<p>${JSON.stringify(row)}</p>`;
+            });
+        })
+        .catch(error => console.error('Error:', error));
+    });
+
+    // Add and Remove Sorting Levels
+    document.querySelector('.add-sort').addEventListener('click', () => {
+        const sortOptions = document.querySelector('.sort-options');
+        const newSort = document.querySelector('.criteria-item').cloneNode(true);
+        const index = sortOptions.querySelectorAll('.criteria-item').length + 1;
+        newSort.querySelector('input[type="radio"]').name = `direction-${index}`;
+        sortOptions.appendChild(newSort);
+
+        newSort.querySelector('.remove-sort').addEventListener('click', (e) => {
+            e.target.parentElement.remove();
+        });
+    });
+
+    // Add and Remove Filter Levels
+    document.querySelector('.add-filter').addEventListener('click', () => {
+        const filtersContainer = document.querySelector('.filters');
+        const newFilter = document.querySelector('.filter-item').cloneNode(true);
+        filtersContainer.appendChild(newFilter);
+
+        newFilter.querySelector('.remove-filter').addEventListener('click', (e) => {
+            e.target.parentElement.remove();
+        });
+    });
+
+    // Remove pre-existing sort/filter
+    document.querySelectorAll('.remove-sort').forEach(button => {
+        button.addEventListener('click', (e) => {
+            e.target.parentElement.remove();
+        });
+    });
+
+    document.querySelectorAll('.remove-filter').forEach(button => {
+        button.addEventListener('click', (e) => {
+            e.target.parentElement.remove();
+        });
+    });
+});
+</script>
 </body>
 </html>
