@@ -148,6 +148,14 @@ def getPredictions(uid):
                 recString = "No recommendations. Enjoy the weather!"   
         pred_str = pred_str + recString
         return str(predictions['Temp'][0], pred=pred_str)
+    
+@app.route('/user/<uid>')
+def main(uid):
+    if int(uid) == -1:
+        return "<h1>User info</h1> Incorrect username or password"
+    else:
+        settemp(uid)
+        return render_template('user.html')
 
 # Allow the user to sort and filter database items for analysis
 @app.route('/user/<uid>', methods=['GET', 'POST'])
@@ -158,11 +166,11 @@ def sortfilter(uid):
     else:
         settemp(uid)
         # When user attempts to upload, get data from database
+        file = request.files["csv_file"]
         cursor, connection = get_db()
         weatherResults = execute_query("SELECT * FROM dbo.HS_WEATHER;")
         columnNames = [column[0] for column in cursor.description]
         data = pd.DataFrame.from_records(weatherResults, columns=columnNames)
-        file = request.files['csv_file']
         
         year_filter = request.form.get('year')
         if year_filter != "":
