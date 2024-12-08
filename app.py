@@ -119,6 +119,17 @@ def login():
     userid = getuid(username, password)
     return redirect("/user/{}".format(userid))
 
+@app.route('/predict/<uid>', methods=['GET'])
+def getPredictions(uid):
+    if int(uid) == -1:
+        return "<h1>User info</h1> Incorrect username or password"
+    else:
+        minTemp, maxTemp = settemp(uid)
+        predictions = predict(datetime.date.today(), 0)
+        temperature = predictions['Temp'][0]
+        rain = predictions['Rain'][0]
+        return str(predictions['Temp'][0])
+
 # Allow the user to sort and filter database items for analysis
 @app.route('/user/<uid>', methods=['GET', 'POST'])
 def sortfilter(uid):
