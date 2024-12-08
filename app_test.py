@@ -193,7 +193,7 @@ def get_data(query=None):
             "WHERE FLOOR(FRSHTT / 1000) % 10 = 1 GROUP BY YEAR(DATE) ORDER BY YEAR(DATE);", 
             ("DATE", "TEMP"), "line", "", "Temperature (F)", "Lowest temperature for snowy days by year", ()),
         q4: ("SELECT DAY(DATE) AS DAY, AVG(DEWP) AS DEWP  FROM dbo.HS_WEATHER GROUP BY DAY(DATE) ORDER BY DAY",
-            ("DAY", "DEWP"), "line", "", "Dew point", "Average dew point by day", ()),
+            ("DAY", "DEWP"), "line", "", "Dew point (F)", "Average dew point by day", ()),
         q5: ("SELECT YEAR(DATE) AS YEAR, COUNT(*) AS RAIN_FREQ FROM dbo.HS_WEATHER WHERE FLOOR(FRSHTT / 10000) % 10 = 1 GROUP BY YEAR(DATE)",
             ("YEAR", "RAIN_FREQ"), "line", "", "Number of rainy days", "Number of rainy days by year", ())
     }
