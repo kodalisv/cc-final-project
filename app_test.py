@@ -42,12 +42,13 @@ def get_db():
     return db, conn
 
 # Run queries
-def execute_query(query, args=()):
+def execute_query(query:str, args=()):
     db, conn = get_db()
     db.execute(query, args)
-    rows=db.fetchall()
-    conn.commit()
-    return rows
+    if query.lower().startswith(("select")):
+        return db.fetchall()
+    else:
+        conn.commit()
 
 # Run other queries
 def insert_many(query, args=[]):

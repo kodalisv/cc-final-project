@@ -6,11 +6,9 @@ DB_PASSWORD = 'weatherapp1!'
 DB_NAME = 'ccfinalprojectdatabase'
 
 
-query = """SELECT A.MONTH, A.HOT_DAYS, B.COLD_DAYS FROM
-(SELECT AVG(WDSP) AS HOT_DAYS, MONTH(DATE) AS MONTH FROM dbo.HS_WEATHER WHERE TEMP > %s GROUP BY MONTH(DATE)) A JOIN 
-(SELECT AVG(WDSP) AS COLD_DAYS, MONTH(DATE) AS MONTH FROM dbo.HS_WEATHER WHERE TEMP < %s GROUP BY MONTH(DATE)) B ON A.MONTH = B.MONTH;"""
+query = """UPDATE dbo.users SET maxt = %s, mint = %s WHERE id = %s"""
 
-args = (50, 75)
+args = (50, 75, 12)
 
 conn = sql.connect(server=DB_SERVER, 
                     user=DB_USER, 
@@ -18,4 +16,7 @@ conn = sql.connect(server=DB_SERVER,
                     database=DB_NAME)
 cursor = conn.cursor()
 cursor.execute(query, args)
-print(cursor.fetchall())
+if query.lower().startswith(("update", "insert")):
+    conn.commit()
+else:
+    print(cursor.fetchall())
