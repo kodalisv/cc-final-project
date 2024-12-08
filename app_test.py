@@ -150,9 +150,9 @@ def main(uid):
 
 def get_data(query=None, args=()):
     """Fetch data from the database and return as a Pandas DataFrame."""
-    q1 = "what were the highest and lowest temperatures for this month in the previous years?"
-    q2 = "what was the average wind speed for hot days and cold days each month?"
-    q3 = "what was the coldest day this month across all years?"
+    q1 = "highest_lowest_temperatures"
+    q2 = "average_wind_speed_hot_cold_days"
+    q3 = "coldest_day_this_month"
     
     responses = {
         q1 : ("SELECT YEAR(DATE) AS YEAR, MAX(TEMP) AS MAX_TEMP, MIN(TEMP) AS MIN_TEMP FROM " +\
