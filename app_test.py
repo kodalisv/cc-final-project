@@ -150,7 +150,7 @@ def uploadcsv(uid):
         if day_filter != "":
             day_filter = int(day_filter)
 
-        sort_column = request.form.get('sort_column')
+        sort_column = request.form.getlist('sort_column')
         sort_order = request.form.get('sort_order', 'asc')
         # If no file name is given, just sort and return what's in the database
         # Otherwise, add data from the uploaded CSV to the database, then sort and return data
