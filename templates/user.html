@@ -28,22 +28,19 @@
       width: 300px;
       margin: 20px auto;
     }
-    input[type="text"], input[type="file"], select, input[type="password"] {
+    select, button {
       width: 100%;
       padding: 12px;
       margin: 10px 0;
       border: 1px solid #ccc;
       border-radius: 5px;
-      box-sizing: border-box; /* Ensures padding does not affect width */
+      box-sizing: border-box;
     }
     button {
       background-color: #228b22;
       color: white;
-      padding: 12px;
       border: none;
-      border-radius: 5px;
       cursor: pointer;
-      width: 100%;
     }
     button:hover {
       background-color: #228b22;
@@ -68,9 +65,16 @@
 
 <!-- Chat Box -->
 <h3>Ask your questions below:<br>
-    Enter 'help' for a list of questions to ask</h3>
+
 <form id="queryForm">
-    <input type="text" id="queryInput" name="query" placeholder="Enter SQL query" required>
+    <select id="query" name="query" required>
+        <option value="">Select a question</option>
+        <option value="highest_lowest_temperatures">What were the highest and lowest temperatures for this month across all years?</option>
+        <option value="average_wind_speed_hot_cold_days">What was the average wind speed for hot days and cold days each month?</option>
+        <option value="coldest_day_this_month">What was the coldest day this month across all years?</option>
+        <option value="predicted_temperature_next_7_days">What is the predicted temperature in the next 7 days?</option>
+        <option value="rainy_days_next_7_days">How many rainy days will there be in the next 7 days?</option>
+    </select>
     <button type="submit">Submit</button>
 </form>
 <div id="queryChart">
