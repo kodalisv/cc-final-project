@@ -2,7 +2,7 @@ from flask import Flask, render_template, request, g, redirect, send_file
 import pymssql as sql
 import os
 import pandas as pd
-from sklearn import model_selection, ensemble
+from sklearn import ensemble
 import datetime
 import matplotlib.pyplot as plt
 import io
@@ -209,21 +209,18 @@ def query():
         response = {"error": str(e)}
     return response
 
-
-@app.route("/predict/<uid>")
-def predict(uid):
+# Given a date, returns temp/rain prediction for the next day and (daysAhead) more days after that
+def predict(date, daysAhead):
+    # Create date list
+    dateList = []
+    for x in range(0, daysAhead+1):
+        dateList.append(date + datetime.timedelta(x))
+    
     cursor, connection = get_db()
-    currentDate = datetime.datetime.now()
-    year = currentDate.year
-    month = currentDate.month
-    day = currentDate.day
     # Execute a query
     weatherResults = execute_query("SELECT * FROM dbo.HS_WEATHER;")
     # Get column names
     columnNames = [column[0] for column in cursor.description]
-    # Get user data
-    coldLimit = execute_query("SELECT mint FROM dbo.users WHERE id=%s;", (uid))
-    hotLimit = execute_query("SELECT maxt FROM dbo.users WHERE id=%s;", (uid))
 
     # Import data
     data = pd.DataFrame.from_records(weatherResults, columns=columnNames)
@@ -256,48 +253,40 @@ def predict(uid):
 
     # Create train test splits
     X_set_temp = data.drop(["NEXT_TEMP", "RAIN"], axis=1)
-    Y_set_temp = data["NEXT_TEMP"]
-    X_train_temp, X_test_temp, y_train_temp, y_test_temp = model_selection.train_test_split(X_set_temp, Y_set_temp, test_size=0.2)
+    y_set_temp = data["NEXT_TEMP"]
 
     X_set_rain = data.drop(["NEXT_TEMP", "RAIN"], axis=1)
-    Y_set_rain = data["RAIN"]
-    X_train_rain, X_test_rain, y_train_rain, y_test_rain = model_selection.train_test_split(X_set_rain, Y_set_rain, test_size=0.2)
+    y_set_rain = data["RAIN"]
 
     # Build and run model
     tempForest = ensemble.RandomForestRegressor(max_depth=2, random_state=0)
-    tempForest.fit(X_train_temp, y_train_temp)
+    tempForest.fit(X_set_temp, y_set_temp)
 
     rainForest = ensemble.RandomForestClassifier()
-    rainForest.fit(X_train_rain, y_train_rain)
+    rainForest.fit(X_set_rain, y_set_rain)
 
     # Predict temperature
-    # Filter historic data to only matching date
-    prevData = data.loc[data["DAY"] == day]
-    prevData = prevData.loc[prevData['MONTH'] == month]
-    prevData.drop(["NEXT_TEMP", "RAIN"], axis=1, inplace=True)
-    # Create one-row dataframe on average day (from historical data)
-    average_day = pd.DataFrame([prevData.mean()])
-    average_day['YEAR'] = year
-    # Run prediction on average day
-    predictedTemp = tempForest.predict(average_day)[0]
-    predictedRain = rainForest.predict(average_day)[0]
+    # Group days into average of day + month combinations
+    data["COM_DATE"] = list(zip(data['DAY'], data['MONTH']))
+    avgDayDF = data.groupby(["COM_DATE"]).mean().reset_index()
+    # Create list of dates to keep
+    combinedDateList = []
+    for y in range(0, len(dateList)):
+        combinedDateList.append((dateList[y].day, dateList[y].month))
+    # Filter anything not in the list
+    filteredDF = avgDayDF[avgDayDF["COM_DATE"].isin(combinedDateList)]
+    filteredDF.drop(["NEXT_TEMP", "RAIN", "COM_DATE"], axis=1, inplace=True)
+    # Make predictions
+    predictedTemp = tempForest.predict(filteredDF)
+    predictedRain = rainForest.predict(filteredDF)
+    # Store predictions for each day in dataframe
+    predictedData = {"Date": dateList, "Temp": predictedTemp, "Rain": predictedRain}
+    predictDF = pd.DataFrame(predictedData)
+    return predictDF
 
-    # Create recommendation based on predictions
-    recString = ""
-    match predictedTemp:
-        case predictedTemp if predictedTemp < coldLimit:
-            recString = recString + "You should bring a coat"
-        case predictedTemp if predictedTemp > hotLimit:
-            recString = recString + "You should bring some water"
-    if predictedRain == 1:
-        if recString == "":
-            recString = recString + "You should bring an umbrella"
-        else:
-            recString = recString + " and an umbrella"
-    else:
-        if recString == "":
-            recString = "No recommendations. Enjoy the weather!"
-    return recString
+@app.route('/testing')
+def predictTest():
+    return predict(datetime.datetime(2024, 12, 25), 8).to_string()
 
 if __name__ == "__main__":
     app.run(debug=True)
