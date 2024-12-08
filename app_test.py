@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, g, redirect, send_file
+from flask import Flask, render_template, request, g, redirect, send_file, abort
 import pymssql as sql
 import os
 import pandas as pd
@@ -6,8 +6,6 @@ from sklearn import ensemble
 import datetime
 import matplotlib.pyplot as plt
 import io
-
-#app = Flask(__name__)
 
 # Database connection details
 DB_SERVER = 'ccfinalprojectserver.database.windows.net'
@@ -128,42 +126,46 @@ def main(uid):
 
 @app.route('/user/<uid>', methods=['POST'])
 def uploadcsv(uid):
-    file = request.files['csv_file']
-    cursor, connection = get_db()
-    weatherResults = execute_query("SELECT * FROM dbo.HS_WEATHER;")
-    columnNames = [column[0] for column in cursor.description]
-    data = pd.DataFrame.from_records(weatherResults, columns=columnNames)
+    uid = int(uid)
+    if uid == -1:
+        abort(404)
+    else:
+        file = request.files['csv_file']
+        cursor, connection = get_db()
+        weatherResults = execute_query("SELECT * FROM dbo.HS_WEATHER;")
+        columnNames = [column[0] for column in cursor.description]
+        data = pd.DataFrame.from_records(weatherResults, columns=columnNames)
 
-    sort_column = request.form.get('sort_column')
-    sort_order = request.form.get('sort_order', 'asc')
-    if file.filename == '':
-        if sort_column:
-            data = data.sort_values(by=sort_column, ascending=(sort_order == 'asc'))
-        return render_template('user.html', data=data.to_html())
-
-    try:
-        uploadedData = pd.read_csv(file)
-        uploadedTuples = [tuple(x) for x in uploadedData.to_numpy()]
-        sql_insert = "INSERT INTO dbo.HS_WEATHER (STATION, DATE, LATITUDE, LONGITUDE, " +\
-            "ELEVATION, NAME, TEMP, TEMP_ATTRIBUTES, DEWP, DEWP_ATTRIBUTES, SLP, " +\
-            "SLP_ATTRIBUTES, STP, STP_ATTRIBUTES, VISIB, VISIB_ATTRIBUTES, WDSP, " +\
-            "WDSP_ATTRIBUTES, MXSPD, GUST, MAX, MAX_ATTRIBUTES, MIN, " +\
-            "MIN_ATTRIBUTES, PRCP, PRCP_ATTRIBUTES, SNDP, FRSHTT) VALUES " +\
-            "(%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)"
-        cursor.executemany(sql_insert, uploadedTuples)
-        connection.commit()
-        # Allow sorting
         sort_column = request.form.get('sort_column')
         sort_order = request.form.get('sort_order', 'asc')
+        if file.filename == '':
+            if sort_column:
+                data = data.sort_values(by=sort_column, ascending=(sort_order == 'asc'))
+            return render_template('user.html', data=data.to_html())
 
-        data = execute_query("SELECT * FROM dbo.HS_WEATHER;")
-        dataframe = pd.DataFrame.from_records(data, columns=columnNames)
-        if sort_column:
-            dataframe = dataframe.sort_values(by=sort_column, ascending=(sort_order == 'asc'))
-        # Process the DataFrame here (e.g., display it, save it to a database)
-        return render_template('user.html', data=dataframe.to_html())
-    except Exception as e:
-        return f'Error processing file: {e}'
+        try:
+            uploadedData = pd.read_csv(file)
+            uploadedTuples = [tuple(x) for x in uploadedData.to_numpy()]
+            sql_insert = "INSERT INTO dbo.HS_WEATHER (STATION, DATE, LATITUDE, LONGITUDE, " +\
+                "ELEVATION, NAME, TEMP, TEMP_ATTRIBUTES, DEWP, DEWP_ATTRIBUTES, SLP, " +\
+                "SLP_ATTRIBUTES, STP, STP_ATTRIBUTES, VISIB, VISIB_ATTRIBUTES, WDSP, " +\
+                "WDSP_ATTRIBUTES, MXSPD, GUST, MAX, MAX_ATTRIBUTES, MIN, " +\
+                "MIN_ATTRIBUTES, PRCP, PRCP_ATTRIBUTES, SNDP, FRSHTT) VALUES " +\
+                "(%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)"
+            cursor.executemany(sql_insert, uploadedTuples)
+            connection.commit()
+            # Allow sorting
+            sort_column = request.form.get('sort_column')
+            sort_order = request.form.get('sort_order', 'asc')
+
+            data = execute_query("SELECT * FROM dbo.HS_WEATHER;")
+            dataframe = pd.DataFrame.from_records(data, columns=columnNames)
+            if sort_column:
+                dataframe = dataframe.sort_values(by=sort_column, ascending=(sort_order == 'asc'))
+            # Process the DataFrame here (e.g., display it, save it to a database)
+            return render_template('user.html', data=dataframe.to_html())
+        except Exception as e:
+            return f'Error processing file: {e}'
 
 
 def get_data(query=None):
