@@ -264,8 +264,8 @@ def get_data(query=None):
             ("YEAR", "RAIN_FREQ"), "line", "", "Number of rainy days", "Number of rainy days by year", ())
     }
     predictors = {
-        q6: (datetime.date.today(), 7, 2, "line", "", "Temperature (F)", "Predicted Average Temperature in the next 7 days"),
-        q7: (datetime.date.today(), 10, 1, "bar", "", "Number of days", "Predicted Number of Rainy Days in the next 10 days") 
+        q6: (datetime.date.today(), 6, 2, "line", "", "Temperature (F)", "Predicted Average Temperature in the next 7 days"),
+        q7: (datetime.date.today(), 9, 1, "bar", "", "Number of days", "Predicted Number of Rainy Days in the next 10 days") 
     }
     
     try:
