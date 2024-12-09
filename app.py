@@ -202,6 +202,7 @@ def sortfilter(uid):
 # Allow the user to sort and filter database items for analysis
 @app.route('/upload/<uid>', methods=['GET', 'POST'])
 def uploadData(uid):
+    uploadMessage = ""
     # If the UID is invalid, the profile doesn't exist
     if int(uid) == -1:
         return "<h1>User info</h1> Incorrect username or password"
@@ -219,7 +220,8 @@ def uploadData(uid):
                     "MIN_ATTRIBUTES, PRCP, PRCP_ATTRIBUTES, SNDP, FRSHTT) VALUES " +\
                     "(%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)"
                 insert_many(sql_insert, uploadedTuples)
-    return render_template('upload.html', uid=uid)
+                uploadMessage = "Upload complete!"
+    return render_template('upload.html', uid=uid, message=uploadMessage)
 
 
 def get_data(query=None):

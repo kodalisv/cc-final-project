@@ -68,6 +68,11 @@
     <br>
     <button type="submit">Upload CSV</button>
 </form>
+<div class="response">
+    {% if message %}
+        <p>{{ message | safe }}</p>
+    {% endif %}
+</div>
 <form action="{{ url_for('sortfilter', uid=uid) }}" method="get">
     <button>Return to User Page</button>
 </form>
