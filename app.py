@@ -245,8 +245,8 @@ def get_data(query=None):
             ("YEAR", "MAX_TEMP", "MIN_TEMP"), "bar", "", "Temperature (F)", 
             "Previous Years Temperature chart of current month", ()),
         q2:  ("""SELECT A.MONTH, A.HOT_DAYS, B.COLD_DAYS FROM
-            (SELECT AVG(WDSP) AS HOT_DAYS, MONTH(DATE) AS MONTH FROM dbo.HS_WEATHER WHERE TEMP > %s GROUP BY MONTH(DATE)) A JOIN 
-            (SELECT AVG(WDSP) AS COLD_DAYS, MONTH(DATE) AS MONTH FROM dbo.HS_WEATHER WHERE TEMP < %s GROUP BY MONTH(DATE)) B ON A.MONTH = B.MONTH ORDER BY A.MONTH;""",
+            (SELECT AVG(WDSP) AS HOT_DAYS, MONTH(DATE) AS MONTH FROM dbo.HS_WEATHER WHERE TEMP > %s AND TEMP < 9999.9 GROUP BY MONTH(DATE)) A JOIN 
+            (SELECT AVG(WDSP) AS COLD_DAYS, MONTH(DATE) AS MONTH FROM dbo.HS_WEATHER WHERE TEMP < %s AND TEMP < 9999.9 GROUP BY MONTH(DATE)) B ON A.MONTH = B.MONTH ORDER BY A.MONTH;""",
             ("MONTH", "HOT_DAYS", "COLD_DAYS"), "bar", "", "Wind Speed (knots)",
             "Average wind speed for hot and cold days each month", (mint, maxt)),
         q3: ("SELECT YEAR(DATE) AS YEAR, MIN(MIN) AS MIN_TEMP FROM dbo.HS_WEATHER " +\
@@ -258,8 +258,8 @@ def get_data(query=None):
             ("YEAR", "RAIN_FREQ"), "line", "", "Number of rainy days", "Number of rainy days by year", ())
     }
     predictors = {
-        q6: (datetime.date.today(), 7, 2, "line", "", "Temperature (F)", ""),
-        q7: (datetime.date.today(), 10, 1, "bar", "", "Number of days", "") 
+        q6: (datetime.date.today(), 7, 2, "line", "", "Temperature (F)", "Predicted Average Temperature in the next 7 days"),
+        q7: (datetime.date.today(), 10, 1, "bar", "", "Number of days", "Predicted Number of Rainy Days in the next 10 days") 
     }
     
     try:
