@@ -418,9 +418,5 @@ def predict(date, daysAhead):
     #predictDF = pd.DataFrame(predictedData)
     return predictedData
 
-@app.route('/testing')
-def predictTest():
-    return predict(datetime.datetime(2024, 12, 25), 8).to_string()
-
 if __name__ == "__main__":
     app.run(debug=True)
