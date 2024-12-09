@@ -129,25 +129,27 @@ def getPredictions(uid):
         temperature = predictions['Temp'][0]
         rain = predictions['Rain'][0]
         pred_str = ""
-        pred_str += "The predicted temperature for tomorrow is: " + str(temperature) + "\n"
+        pred_str += "The predicted temperature for tomorrow is: " + str(round(temperature, 2)) + " degrees Fahrenheit. \n"
         if rain == 1:
             pred_str += "It is also expected to rain tomorrow." "\n"
         recString = ""
         match temperature:
             case temperature if temperature < minTemp:
-                recString = recString + "You should bring a coat"
+                recString = recString + "You should bring thick clothes or a coat"
             case temperature if temperature > maxTemp:
-                recString = recString + "You should bring some water"
+                recString = recString + "You should wear thin clothes and drink water"
         if rain == 1:
             if recString == "":
-                recString = recString + "You should bring an umbrella"
+                recString = recString + "You should bring an umbrella or a raincoat."
             else:
-                recString = recString + " and an umbrella"
+                recString = recString + " as well as an umbrella or raincoat."
         else:
             if recString == "":
-                recString = "No recommendations. Enjoy the weather!"   
+                recString = "No recommendations. Enjoy the weather!"  
+            else:
+                recString += "." 
         pred_str = pred_str + recString
-        return str(predictions['Temp'][0], pred=pred_str)
+        return render_template('predict.html', pred=pred_str, uid=uid)
 
 # Allow the user to sort and filter database items for analysis
 @app.route('/user/<uid>', methods=['GET', 'POST'])
@@ -205,9 +207,9 @@ def sortfilter(uid):
         if sort_column:
             data = data.sort_values(by=sort_column, ascending=(sort_order == 'asc'))
         # Return the dataframe as an HTML table, to display it to users
-        return render_template('user.html', data=data.to_html())
+        return render_template('user.html', data=data.to_html(), uid=uid)
     settemp(uid)
-    return render_template('user.html')
+    return render_template('user.html', uid=uid)
 
 
 def get_data(query=None):

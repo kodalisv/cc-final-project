@@ -62,6 +62,10 @@
 <body>
 
 <h1>User Webpage</h1>
+<h3>Get predictions for tomorrow's weather!</h3>
+<form action="{{ url_for('getPredictions', uid=uid) }}" method="get">
+    <button>View Predictions</button>
+</form>
 
 <!-- Chat Box -->
 <h3>Select a question from the dropdown box<br>
