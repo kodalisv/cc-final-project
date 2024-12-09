@@ -110,13 +110,12 @@
             }
         });
 </script>
-
-<h2>Upload CSV File</h2>
-<h3>Please upload only CSV files from the NCEI database! Otherwise, an error will occur.</h3>
-<h3>To sort on the data currently in the database, upload no file and click 'Sort'</h3>
+<form action="{{ url_for('uploadData', uid=uid) }}" method="get">
+    <button>Return to User Page</button>
+</form>
+<h3>Sort through the database here!</h3>
+<h3>You can filter based on dates, and sort on multiple attributes.</h3>
 <form method="POST" enctype="multipart/form-data">
-    <input type="file" name="csv_file">
-    <br>
     <label>Filter Date:</label><br>
     <label for="year">Year:</label>
     <input type="number" id="year" name="year"><br>
@@ -142,13 +141,13 @@
         <option value="desc">Descending</option>
     </select>
     <br><br>
-    <button type="submit">Upload CSV & Sort</button>
+    <button type="submit">Sort</button>
 </form>
 
 <div class="response">
     {% if data %}
         <h3>Sorted Data:</h3>
-        {{ data | safe }}
+        <p>{{ data | safe }}</p>
     {% endif %}
 </div>
 

@@ -160,7 +160,6 @@ def sortfilter(uid):
     elif request.method == "POST":
         settemp(uid)
         # When user attempts to upload, get data from database
-        file = request.files["csv_file"]
         cursor, connection = get_db()
         weatherResults = execute_query("SELECT * FROM dbo.HS_WEATHER;")
         columnNames = [column[0] for column in cursor.description]
@@ -178,17 +177,6 @@ def sortfilter(uid):
 
         sort_column = request.form.getlist('sort_column')
         sort_order = request.form.get('sort_order', 'asc')
-
-        if file.filename != '':
-                uploadedData = pd.read_csv(file)
-                uploadedTuples = [tuple(x) for x in uploadedData.to_numpy()]
-                sql_insert = "INSERT INTO dbo.HS_WEATHER (STATION, DATE, LATITUDE, LONGITUDE, " +\
-                    "ELEVATION, NAME, TEMP, TEMP_ATTRIBUTES, DEWP, DEWP_ATTRIBUTES, SLP, " +\
-                    "SLP_ATTRIBUTES, STP, STP_ATTRIBUTES, VISIB, VISIB_ATTRIBUTES, WDSP, " +\
-                    "WDSP_ATTRIBUTES, MXSPD, GUST, MAX, MAX_ATTRIBUTES, MIN, " +\
-                    "MIN_ATTRIBUTES, PRCP, PRCP_ATTRIBUTES, SNDP, FRSHTT) VALUES " +\
-                    "(%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)"
-                insert_many(sql_insert, uploadedTuples)
 
         # Get database data, then sort it
         data['DATE'] = pd.to_datetime(data['DATE'])
@@ -210,6 +198,28 @@ def sortfilter(uid):
         return render_template('user.html', data=data.to_html(), uid=uid)
     settemp(uid)
     return render_template('user.html', uid=uid)
+
+# Allow the user to sort and filter database items for analysis
+@app.route('/upload/<uid>', methods=['GET', 'POST'])
+def uploadData(uid):
+    # If the UID is invalid, the profile doesn't exist
+    if int(uid) == -1:
+        return "<h1>User info</h1> Incorrect username or password"
+    elif request.method == "POST":
+        settemp(uid)
+        # When user attempts to upload, get data from database
+        file = request.files["csv_file"]
+        if file.filename != '':
+                uploadedData = pd.read_csv(file)
+                uploadedTuples = [tuple(x) for x in uploadedData.to_numpy()]
+                sql_insert = "INSERT INTO dbo.HS_WEATHER (STATION, DATE, LATITUDE, LONGITUDE, " +\
+                    "ELEVATION, NAME, TEMP, TEMP_ATTRIBUTES, DEWP, DEWP_ATTRIBUTES, SLP, " +\
+                    "SLP_ATTRIBUTES, STP, STP_ATTRIBUTES, VISIB, VISIB_ATTRIBUTES, WDSP, " +\
+                    "WDSP_ATTRIBUTES, MXSPD, GUST, MAX, MAX_ATTRIBUTES, MIN, " +\
+                    "MIN_ATTRIBUTES, PRCP, PRCP_ATTRIBUTES, SNDP, FRSHTT) VALUES " +\
+                    "(%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)"
+                insert_many(sql_insert, uploadedTuples)
+    return render_template('upload.html', uid=uid)
 
 
 def get_data(query=None):
