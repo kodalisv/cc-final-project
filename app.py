@@ -73,6 +73,7 @@ def getuid(username, password, email):
         return -1
     return rows[0][0]
 
+# Sets the max and min temperatures for a user, even if they're missing
 def settemp(uid):
     rows = execute_query("""SELECT mint, maxt FROM dbo.users WHERE id = %s""", (uid,))
     if len(rows) == 0:
@@ -120,15 +121,18 @@ def login():
     userid = getuid(username, password, email)
     return redirect("/user/{}".format(userid))
 
+# Get weather predictions and recommend them to users
 @app.route('/predict/<uid>', methods=['GET'])
 def getPredictions(uid):
     if int(uid) == -1:
         return "<h1>User info</h1> Incorrect username or password"
     else:
+        # Get weather predictions
         minTemp, maxTemp = settemp(uid)
         predictions = predict(datetime.date.today(), 0)
         temperature = predictions['Temp'][0]
         rain = predictions['Rain'][0]
+        # Create prediction string based on conditions
         pred_str = ""
         pred_str += "The predicted temperature for tomorrow is: " + str(round(temperature, 2)) + " degrees Fahrenheit. \n"
         if rain == 1:
@@ -166,6 +170,7 @@ def sortfilter(uid):
         columnNames = [column[0] for column in cursor.description]
         data = pd.DataFrame.from_records(weatherResults, columns=columnNames)
         
+        # Create filters for each date part
         year_filter = request.form.get('year')
         if year_filter != "":
             year_filter = int(year_filter)
@@ -185,6 +190,7 @@ def sortfilter(uid):
         data['MONTH'] = data['DATE'].dt.month
         data['DAY'] = data['DATE'].dt.day
 
+        # Filter database if date values exist
         if year_filter != '':
             data = data[data['YEAR'] == year_filter]
         if month_filter != '':
@@ -224,7 +230,7 @@ def uploadData(uid):
                 uploadMessage = "Upload complete!"
     return render_template('upload.html', uid=uid, message=uploadMessage)
 
-
+# Contains and processes all queries the user may enter
 def get_data(query=None):
     """Fetch data from the database and return as a Pandas DataFrame."""
     q1 = "highest_lowest_temperatures"
@@ -308,6 +314,7 @@ def get_data(query=None):
     
     return data, cols, ctype, x_title, y_title, c_title
 
+# Plot the chart for a given set of data and return it
 def get_chart(data, cols, ctype = "bar", x_title="", y_title="", c_title="Data Chart"):
     """Generate a chart using Matplotlib."""
     df = pd.DataFrame.from_records(data, columns=cols)
@@ -330,7 +337,7 @@ def get_chart(data, cols, ctype = "bar", x_title="", y_title="", c_title="Data C
     plt.close()
     return img
 
-
+# Processes user queries and returns charts from get_chart
 @app.route('/query', methods=['POST'])
 def query():
     """Handle user queries and return data as chart values."""
@@ -416,7 +423,6 @@ def predict(date, daysAhead):
     predictedRain = rainForest.predict(filteredDF)
     # Store predictions for each day in dataframe
     predictedData = {"Date": dateList, "Temp": predictedTemp, "Rain": predictedRain}
-    #predictDF = pd.DataFrame(predictedData)
     return predictedData
 
 if __name__ == "__main__":
